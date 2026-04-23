@@ -2,61 +2,66 @@
 <html>
 <head>
   <title>Video QC Dashboard</title>
+
   <style>
     body {
       font-family: Arial;
-      margin: 20px;
-      background: #f5f5f5;
+      margin: 0;
+      background: #f4f6f8;
     }
 
     h1 {
       text-align: center;
+      padding: 15px;
+      background: #111;
+      color: white;
+      margin: 0;
     }
 
     .container {
       display: flex;
-      gap: 20px;
+      height: calc(100vh - 60px);
     }
 
     .table-section {
-      width: 60%;
-      background: white;
-      padding: 10px;
-      border-radius: 10px;
-      height: 80vh;
+      width: 35%;
       overflow-y: scroll;
+      background: white;
+      border-right: 1px solid #ddd;
     }
 
     .video-section {
-      width: 40%;
-      background: white;
-      padding: 10px;
-      border-radius: 10px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    td, th {
-      padding: 8px;
-      border-bottom: 1px solid #ddd;
-      cursor: pointer;
-    }
-
-    tr:hover {
-      background: #f0f0f0;
+      width: 65%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
     }
 
     video {
-      width: 100%;
-      border-radius: 10px;
+      width: 80%;
+      max-height: 60vh;
+      border-radius: 12px;
+      background: black;
     }
 
-    .buttons button {
+    .meta {
+      margin-top: 15px;
+      width: 80%;
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .buttons {
+      margin-top: 15px;
+    }
+
+    button {
+      padding: 10px 15px;
       margin: 5px;
-      padding: 8px 12px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
@@ -64,6 +69,38 @@
 
     .approve { background: green; color: white; }
     .reject { background: red; color: white; }
+
+    textarea {
+      width: 80%;
+      height: 80px;
+      margin-top: 10px;
+      border-radius: 6px;
+      padding: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th {
+      background: #222;
+      color: white;
+      padding: 8px;
+      position: sticky;
+      top: 0;
+    }
+
+    td {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+
+    tr:hover {
+      background: #f1f1f1;
+    }
 
   </style>
 </head>
@@ -74,19 +111,25 @@
 
 <div class="container">
 
+  <!-- LEFT TABLE -->
   <div class="table-section">
     <table id="videoTable"></table>
   </div>
 
+  <!-- CENTER PLAYER -->
   <div class="video-section">
+
     <video id="player" controls></video>
+
+    <div class="meta" id="meta"></div>
 
     <div class="buttons">
       <button class="approve" onclick="markQC('Approved')">Approve</button>
       <button class="reject" onclick="markQC('Rejected')">Reject</button>
     </div>
 
-    <textarea id="comment" placeholder="Add comment..." style="width:100%; height:80px;"></textarea>
+    <textarea id="comment" placeholder="Add comment..."></textarea>
+
   </div>
 
 </div>
@@ -119,7 +162,9 @@ function renderTable() {
   table.innerHTML = `
     <tr>
       <th>Video ID</th>
-      <th>Status</th>
+      <th>Enterprise</th>
+      <th>Verified</th>
+      <th>Created</th>
     </tr>
   `;
 
@@ -129,7 +174,9 @@ function renderTable() {
     table.innerHTML += `
       <tr onclick="playVideo(${i})">
         <td>${v.video_id}</td>
+        <td>${v.enterprise_id}</td>
         <td>${v.verified_status}</td>
+        <td>${v.created_on}</td>
       </tr>
     `;
   });
@@ -137,21 +184,33 @@ function renderTable() {
 
 function playVideo(index) {
   currentIndex = index;
-  document.getElementById("player").src = videos[index].video_url;
+
+  const v = videos[index];
+
+  document.getElementById("player").src = v.video_url;
+
+  document.getElementById("meta").innerHTML = `
+    <b>Video ID:</b> ${v.video_id}<br>
+    <b>Enterprise ID:</b> ${v.enterprise_id}<br>
+    <b>Verified:</b> ${v.verified_status}<br>
+    <b>Created:</b> ${v.created_on}<br>
+    <b>Updated:</b> ${v.updated_on}
+  `;
 }
 
 function markQC(status) {
   if (currentIndex === null) return;
 
+  const v = videos[currentIndex];
   const comment = document.getElementById("comment").value;
 
   alert(`
 QC Marked:
-Video: ${videos[currentIndex].video_id}
+Video: ${v.video_id}
 Status: ${status}
 Comment: ${comment}
 
-(Note: This is demo. Data not saved yet)
+(Note: Not saved yet)
   `);
 }
 
