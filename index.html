@@ -53,6 +53,7 @@
       padding: 10px;
       border-radius: 10px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      font-size: 14px;
     }
 
     .buttons {
@@ -136,15 +137,47 @@
 
 <script>
 
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=0&single=true&output=csv";
+// ✅ Your Google Sheet (already added)
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?output=csv";
 
 let videos = [];
 let currentIndex = null;
 
+// ✅ Proper CSV parser (handles commas inside values)
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let value = '';
+  let insideQuotes = false;
+
+  for (let char of text) {
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+    } else if (char === ',' && !insideQuotes) {
+      row.push(value);
+      value = '';
+    } else if (char === '\n' && !insideQuotes) {
+      row.push(value);
+      rows.push(row);
+      row = [];
+      value = '';
+    } else {
+      value += char;
+    }
+  }
+
+  row.push(value);
+  rows.push(row);
+
+  return rows;
+}
+
+// Fetch data
 fetch(SHEET_URL)
   .then(res => res.text())
   .then(csv => {
-    const rows = csv.split("\n").map(r => r.split(","));
+
+    const rows = parseCSV(csv);
     const headers = rows[0];
 
     videos = rows.slice(1).map(row => {
@@ -156,6 +189,7 @@ fetch(SHEET_URL)
     renderTable();
   });
 
+// Render table
 function renderTable() {
   const table = document.getElementById("videoTable");
 
@@ -182,6 +216,7 @@ function renderTable() {
   });
 }
 
+// Play video + show metadata
 function playVideo(index) {
   currentIndex = index;
 
@@ -198,6 +233,7 @@ function playVideo(index) {
   `;
 }
 
+// QC action (currently demo)
 function markQC(status) {
   if (currentIndex === null) return;
 
@@ -210,7 +246,7 @@ Video: ${v.video_id}
 Status: ${status}
 Comment: ${comment}
 
-(Note: Not saved yet)
+⚠️ Not saved yet (next step: backend)
   `);
 }
 
