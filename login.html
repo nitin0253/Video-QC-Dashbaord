@@ -12,37 +12,53 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
+      margin: 0;
     }
 
     .box {
       background: #222;
       padding: 30px;
-      border-radius: 10px;
+      border-radius: 12px;
       text-align: center;
-      width: 300px;
+      width: 320px;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    /* ✅ Uniform styling */
+    select, input, button {
+      width: 100%;
+      padding: 14px;
+      margin: 10px 0;
+      border-radius: 10px;
+      border: none;
+      font-size: 16px;
+      box-sizing: border-box;
     }
 
     select, input {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 6px;
-      border: none;
+      background: #e5e5e5;
     }
 
     button {
-      width: 100%;
-      padding: 10px;
-      border: none;
-      border-radius: 6px;
       background: #4CAF50;
       color: white;
+      font-weight: 600;
       cursor: pointer;
     }
 
     button:hover {
       background: #45a049;
     }
+
+    #error {
+      color: red;
+      font-size: 13px;
+      margin-top: 5px;
+    }
+
   </style>
 </head>
 
@@ -63,15 +79,12 @@
 
   <button onclick="login()">Login</button>
 
-  <p style="display:none;">
-  Password = FirstName@987
-</p>
-
-  <p id="error" style="color:red;"></p>
+  <p id="error"></p>
 </div>
 
 <script>
 
+// 🔐 Password rule: FirstName@987
 function getExpectedPassword(fullName) {
   const firstName = fullName.split(" ")[0];
   return firstName + "@987";
@@ -95,6 +108,20 @@ function login() {
     document.getElementById("error").innerText = "Invalid password";
   }
 }
+
+// ✅ Enter key support (password → login)
+document.getElementById("password").addEventListener("keypress", function(e) {
+  if (e.key === "Enter") {
+    login();
+  }
+});
+
+// ✅ Enter key on dropdown → move to password
+document.getElementById("user").addEventListener("keypress", function(e) {
+  if (e.key === "Enter") {
+    document.getElementById("password").focus();
+  }
+});
 
 </script>
 
