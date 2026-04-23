@@ -4,11 +4,7 @@
   <title>Video QC Dashboard</title>
 
   <style>
-    body {
-      font-family: Arial;
-      margin: 0;
-      background: #f4f6f8;
-    }
+    body { font-family: Arial; margin: 0; background: #f4f6f8; }
 
     h1 {
       text-align: center;
@@ -24,25 +20,21 @@
       font-size: 14px;
     }
 
-    .container {
-      display: flex;
-      height: calc(100vh - 90px);
-    }
+    .container { display: flex; height: calc(100vh - 90px); }
 
     .table-section {
-      width: 35%;
-      overflow-y: scroll;
+      width: 30%;
       background: white;
       border-right: 1px solid #ddd;
+      overflow-y: auto;
     }
 
     .video-section {
-      width: 65%;
+      width: 70%;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px;
     }
 
     video {
@@ -53,20 +45,23 @@
     }
 
     .meta {
-      margin-top: 15px;
+      margin-top: 10px;
       width: 80%;
       background: white;
       padding: 10px;
       border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
       font-size: 14px;
     }
 
-    .buttons {
-      margin-top: 15px;
+    textarea {
+      width: 80%;
+      height: 80px;
+      margin-top: 10px;
+      padding: 8px;
+      border-radius: 6px;
     }
 
-    button {
+    .buttons button {
       padding: 10px 15px;
       margin: 5px;
       border: none;
@@ -76,14 +71,6 @@
 
     .approve { background: green; color: white; }
     .reject { background: red; color: white; }
-
-    textarea {
-      width: 80%;
-      height: 80px;
-      margin-top: 10px;
-      border-radius: 6px;
-      padding: 8px;
-    }
 
     table {
       width: 100%;
@@ -105,20 +92,17 @@
       cursor: pointer;
     }
 
-    tr:hover {
-      background: #f1f1f1;
-    }
+    tr:hover { background: #f1f1f1; }
+
+    .active { background: #d0ebff !important; }
   </style>
 </head>
 
 <body>
 
 <script>
-// 🔐 Protect page
 const reviewer = localStorage.getItem("qc_reviewer");
-if (!reviewer) {
-  window.location.href = "login.html";
-}
+if (!reviewer) window.location.href = "login.html";
 </script>
 
 <h1>🎥 Video QC Dashboard</h1>
@@ -131,7 +115,19 @@ if (!reviewer) {
 <div class="container">
 
   <div class="table-section">
+
+    <div style="padding:10px;">
+      <select id="enterpriseFilter" onchange="applyFilter()" style="width:100%; padding:8px;">
+        <option value="all">All Enterprises</option>
+      </select>
+
+      <div style="font-size:12px; margin-top:5px;">
+        Pending: <b id="pendingCount"></b> | Total: <b id="totalCount"></b>
+      </div>
+    </div>
+
     <table id="videoTable"></table>
+
   </div>
 
   <div class="video-section">
@@ -141,8 +137,8 @@ if (!reviewer) {
     <div class="meta" id="meta"></div>
 
     <div class="buttons">
-      <button class="approve" onclick="markQC('Approved')">Approve</button>
-      <button class="reject" onclick="markQC('Rejected')">Reject</button>
+      <button class="approve" onclick="markQC('Approved')">Approve (A)</button>
+      <button class="reject" onclick="markQC('Rejected')">Reject (R)</button>
     </div>
 
     <textarea id="comment" placeholder="Add comment..."></textarea>
@@ -153,140 +149,156 @@ if (!reviewer) {
 
 <script>
 
-// ✅ Sheet
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?output=csv";
-
-// 🔗 Apps Script (PASTE YOUR URL HERE)
 const API_URL = "PASTE_YOUR_APPS_SCRIPT_URL_HERE";
 
 let videos = [];
-let currentIndex = null;
+let filteredVideos = [];
+let currentIndex = 0;
 
-// show user
 document.getElementById("userName").innerText = reviewer;
 
-// logout
 function logout() {
   localStorage.removeItem("qc_reviewer");
   window.location.href = "login.html";
 }
 
-// CSV parser
 function parseCSV(text) {
   const rows = [];
-  let row = [];
-  let value = '';
-  let insideQuotes = false;
+  let row = [], value = '', insideQuotes = false;
 
   for (let char of text) {
-    if (char === '"') {
-      insideQuotes = !insideQuotes;
-    } else if (char === ',' && !insideQuotes) {
-      row.push(value);
-      value = '';
-    } else if (char === '\n' && !insideQuotes) {
-      row.push(value);
-      rows.push(row);
-      row = [];
-      value = '';
-    } else {
-      value += char;
-    }
+    if (char === '"') insideQuotes = !insideQuotes;
+    else if (char === ',' && !insideQuotes) { row.push(value); value = ''; }
+    else if (char === '\n' && !insideQuotes) { row.push(value); rows.push(row); row = []; value = ''; }
+    else value += char;
   }
 
   row.push(value);
   rows.push(row);
-
   return rows;
 }
 
-// fetch data
 fetch(SHEET_URL)
-  .then(res => res.text())
-  .then(csv => {
+.then(res => res.text())
+.then(csv => {
+  const rows = parseCSV(csv);
+  const headers = rows[0];
 
-    const rows = parseCSV(csv);
-    const headers = rows[0];
-
-    videos = rows.slice(1).map(row => {
-      let obj = {};
-      headers.forEach((h, i) => obj[h.trim()] = row[i]);
-      return obj;
-    });
-
-    renderTable();
+  videos = rows.slice(1).map(r => {
+    let obj = {};
+    headers.forEach((h,i)=> obj[h.trim()] = r[i]);
+    return obj;
   });
 
-// render table
-function renderTable() {
-  const table = document.getElementById("videoTable");
+  populateFilter();
+  applyFilter();
+});
 
-  table.innerHTML = `
-    <tr>
-      <th>Video ID</th>
-      <th>Enterprise</th>
-      <th>Verified</th>
-      <th>Created</th>
-    </tr>
-  `;
+function populateFilter() {
+  const dropdown = document.getElementById("enterpriseFilter");
+  const unique = [...new Set(videos.map(v => v.enterprise_id))];
 
-  videos.forEach((v, i) => {
-    if (v.status !== "done") return;
-
-    table.innerHTML += `
-      <tr onclick="playVideo(${i})">
-        <td>${v.video_id}</td>
-        <td>${v.enterprise_id}</td>
-        <td>${v.verified_status}</td>
-        <td>${v.created_on}</td>
-      </tr>
-    `;
+  unique.forEach(ent => {
+    const opt = document.createElement("option");
+    opt.value = ent;
+    opt.textContent = ent;
+    dropdown.appendChild(opt);
   });
 }
 
-// play video
+function applyFilter() {
+  const selected = document.getElementById("enterpriseFilter").value;
+
+  filteredVideos = videos.filter(v => {
+    if (v.status !== "done") return false;
+    if (v.qc_status && v.qc_status.trim() !== "") return false;
+    if (selected === "all") return true;
+    return v.enterprise_id === selected;
+  });
+
+  updateStats();
+  renderTable();
+
+  if (filteredVideos.length > 0) playVideo(0);
+}
+
+function updateStats() {
+  document.getElementById("pendingCount").innerText = filteredVideos.length;
+  document.getElementById("totalCount").innerText = videos.length;
+}
+
+function renderTable() {
+  let html = `<tr><th>Video ID</th></tr>`;
+
+  for (let i = 0; i < filteredVideos.length; i++) {
+    html += `<tr id="row-${i}" onclick="playVideo(${i})">
+      <td>${filteredVideos[i].video_id}</td>
+    </tr>`;
+  }
+
+  document.getElementById("videoTable").innerHTML = html;
+}
+
+function highlightRow(index) {
+  document.querySelectorAll("tr").forEach(r => r.classList.remove("active"));
+  const row = document.getElementById("row-" + index);
+  if (row) row.classList.add("active");
+}
+
 function playVideo(index) {
   currentIndex = index;
-  const v = videos[index];
+  const v = filteredVideos[index];
 
   document.getElementById("player").src = v.video_url;
 
   document.getElementById("meta").innerHTML = `
     <b>Video ID:</b> ${v.video_id}<br>
-    <b>Enterprise ID:</b> ${v.enterprise_id}<br>
-    <b>Verified:</b> ${v.verified_status}<br>
+    <b>Enterprise:</b> ${v.enterprise_id}<br>
     <b>Created:</b> ${v.created_on}<br>
     <b>Updated:</b> ${v.updated_on}
   `;
+
+  highlightRow(index);
 }
 
-// QC save
 function markQC(status) {
-  if (currentIndex === null) return;
-
-  const v = videos[currentIndex];
+  const v = filteredVideos[currentIndex];
   const comment = document.getElementById("comment").value;
-
-  const payload = {
-    video_id: v.video_id,
-    qc_status: status,
-    qc_comment: comment,
-    qc_done_by: reviewer
-  };
 
   fetch(API_URL, {
     method: "POST",
-    body: JSON.stringify(payload)
+    body: JSON.stringify({
+      video_id: v.video_id,
+      qc_status: status,
+      qc_comment: comment,
+      qc_done_by: reviewer
+    })
   })
-  .then(res => res.json())
   .then(() => {
-    alert("✅ QC Saved");
-    playVideo(currentIndex + 1);
-  })
-  .catch(() => {
-    alert("❌ Error saving QC");
+    filteredVideos.splice(currentIndex, 1);
+    renderTable();
+    updateStats();
+
+    if (filteredVideos.length > 0) {
+      playVideo(currentIndex % filteredVideos.length);
+    } else {
+      document.getElementById("player").src = "";
+      document.getElementById("meta").innerHTML = "🎉 All videos reviewed";
+    }
   });
 }
+
+/* ⌨️ Keyboard shortcuts */
+document.addEventListener("keydown", (e) => {
+  if (!filteredVideos.length) return;
+
+  if (e.key === "a" || e.key === "A") markQC("Approved");
+  if (e.key === "r" || e.key === "R") markQC("Rejected");
+
+  if (e.key === "ArrowRight") playVideo((currentIndex + 1) % filteredVideos.length);
+  if (e.key === "ArrowLeft") playVideo((currentIndex - 1 + filteredVideos.length) % filteredVideos.length);
+});
 
 </script>
 
