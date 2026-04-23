@@ -18,9 +18,15 @@
       margin: 0;
     }
 
+    .topbar {
+      text-align: center;
+      padding: 5px;
+      font-size: 14px;
+    }
+
     .container {
       display: flex;
-      height: calc(100vh - 60px);
+      height: calc(100vh - 90px);
     }
 
     .table-section {
@@ -102,22 +108,32 @@
     tr:hover {
       background: #f1f1f1;
     }
-
   </style>
 </head>
 
 <body>
 
+<script>
+// 🔐 Protect page
+const reviewer = localStorage.getItem("qc_reviewer");
+if (!reviewer) {
+  window.location.href = "login.html";
+}
+</script>
+
 <h1>🎥 Video QC Dashboard</h1>
+
+<div class="topbar">
+  Logged in as: <b id="userName"></b> |
+  <span style="color:red; cursor:pointer;" onclick="logout()">Logout</span>
+</div>
 
 <div class="container">
 
-  <!-- LEFT TABLE -->
   <div class="table-section">
     <table id="videoTable"></table>
   </div>
 
-  <!-- CENTER PLAYER -->
   <div class="video-section">
 
     <video id="player" controls></video>
@@ -137,13 +153,25 @@
 
 <script>
 
-// ✅ Your Google Sheet (already added)
+// ✅ Sheet
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?output=csv";
+
+// 🔗 Apps Script (PASTE YOUR URL HERE)
+const API_URL = "PASTE_YOUR_APPS_SCRIPT_URL_HERE";
 
 let videos = [];
 let currentIndex = null;
 
-// ✅ Proper CSV parser (handles commas inside values)
+// show user
+document.getElementById("userName").innerText = reviewer;
+
+// logout
+function logout() {
+  localStorage.removeItem("qc_reviewer");
+  window.location.href = "login.html";
+}
+
+// CSV parser
 function parseCSV(text) {
   const rows = [];
   let row = [];
@@ -172,7 +200,7 @@ function parseCSV(text) {
   return rows;
 }
 
-// Fetch data
+// fetch data
 fetch(SHEET_URL)
   .then(res => res.text())
   .then(csv => {
@@ -189,7 +217,7 @@ fetch(SHEET_URL)
     renderTable();
   });
 
-// Render table
+// render table
 function renderTable() {
   const table = document.getElementById("videoTable");
 
@@ -216,10 +244,9 @@ function renderTable() {
   });
 }
 
-// Play video + show metadata
+// play video
 function playVideo(index) {
   currentIndex = index;
-
   const v = videos[index];
 
   document.getElementById("player").src = v.video_url;
@@ -233,21 +260,32 @@ function playVideo(index) {
   `;
 }
 
-// QC action (currently demo)
+// QC save
 function markQC(status) {
   if (currentIndex === null) return;
 
   const v = videos[currentIndex];
   const comment = document.getElementById("comment").value;
 
-  alert(`
-QC Marked:
-Video: ${v.video_id}
-Status: ${status}
-Comment: ${comment}
+  const payload = {
+    video_id: v.video_id,
+    qc_status: status,
+    qc_comment: comment,
+    qc_done_by: reviewer
+  };
 
-⚠️ Not saved yet (next step: backend)
-  `);
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(() => {
+    alert("✅ QC Saved");
+    playVideo(currentIndex + 1);
+  })
+  .catch(() => {
+    alert("❌ Error saving QC");
+  });
 }
 
 </script>
