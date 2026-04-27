@@ -1,211 +1,148 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>QA Dashboard</title>
+<title>QA Dashboard</title>
 
-  <style>
-    * { box-sizing: border-box; }
+<style>
+* { box-sizing: border-box; }
 
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Arial;
-      background: linear-gradient(135deg, #0f172a, #1e293b);
-      color: #e2e8f0;
-    }
+body {
+  margin: 0;
+  font-family: 'Segoe UI';
+  background: linear-gradient(135deg,#0f172a,#1e293b);
+  color: #e2e8f0;
+}
 
-    /* HEADER */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      padding: 15px 20px;
-      backdrop-filter: blur(12px);
-      background: rgba(255,255,255,0.05);
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
+/* LIGHT THEME */
+body.light {
+  background: #f1f5f9;
+  color: #0f172a;
+}
 
-    /* LAYOUT */
-    .container {
-      display: flex;
-      height: calc(100vh - 60px);
-    }
+/* HEADER */
+.header {
+  display:flex;
+  justify-content:space-between;
+  padding:15px;
+  background: rgba(0,0,0,0.6);
+}
 
-    /* GLASS BASE */
-    .glass {
-      background: rgba(255,255,255,0.06);
-      backdrop-filter: blur(12px);
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
+/* LAYOUT */
+.container { display:flex; height:calc(100vh - 60px); }
 
-    /* SIDEBAR */
-    .sidebar {
-      width: 30%;
-      padding: 10px;
-      overflow-y: auto;
-    }
+/* GLASS */
+.glass {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
 
-    /* FILTER ROW */
-    .filter-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      padding: 10px;
-      margin-bottom: 10px;
-    }
+/* SIDEBAR */
+.sidebar {
+  width:30%;
+  padding:10px;
+  overflow-y:auto;
+}
 
-    .filter-row input,
-    .filter-row select {
-      padding: 8px;
-      border-radius: 8px;
-      border: none;
-      outline: none;
-      background: rgba(255,255,255,0.08);
-      color: white;
-      backdrop-filter: blur(6px);
-      min-width: 140px;
-    }
+/* STICKY FILTER BAR */
+.filter-row {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  padding:10px;
+  margin-bottom:10px;
+}
 
-    .filter-row input::placeholder {
-      color: #cbd5f5;
-    }
+/* INPUTS */
+input, select {
+  padding:8px;
+  border-radius:8px;
+  border:none;
+  background:rgba(255,255,255,0.08);
+  color:white;
+  min-width:130px;
+}
 
-    .apply-btn {
-      background: rgba(37,99,235,0.8);
-      border: none;
-      padding: 8px 14px;
-      border-radius: 8px;
-      color: white;
-      cursor: pointer;
-      transition: 0.2s;
-    }
+body.light input,
+body.light select {
+  background:#fff;
+  color:#000;
+}
 
-    .apply-btn:hover {
-      background: rgba(37,99,235,1);
-    }
+/* BUTTONS */
+button {
+  border:none;
+  padding:8px 12px;
+  border-radius:8px;
+  cursor:pointer;
+}
 
-    /* TABLE */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
+.apply-btn { background:#2563eb; color:white; }
+.clear-btn { background:#ef4444; color:white; }
 
-    th {
-      padding: 10px;
-      text-align: left;
-      background: rgba(255,255,255,0.08);
-    }
+/* TABLE */
+table { width:100%; border-collapse:collapse; }
+td { padding:10px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; }
+tr:hover { background:rgba(255,255,255,0.05); }
 
-    td {
-      padding: 10px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      cursor: pointer;
-    }
+/* MAIN */
+.main {
+  width:70%;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
 
-    tr:hover {
-      background: rgba(255,255,255,0.05);
-    }
+video {
+  width:75%;
+  border-radius:12px;
+}
 
-    /* MAIN */
-    .main {
-      width: 70%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-    }
+.meta {
+  width:75%;
+  margin-top:10px;
+  padding:12px;
+}
 
-    video {
-      width: 75%;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.2);
-      margin-top: 10px;
-    }
+textarea {
+  width:75%;
+  margin-top:10px;
+  padding:10px;
+  border-radius:8px;
+  border:none;
+}
 
-    .meta {
-      width: 75%;
-      margin-top: 10px;
-      padding: 12px;
-    }
+/* PANEL */
+.side-panel {
+  position:fixed;
+  right:0;
+  top:80px;
+  width:50px;
+  transition:0.3s;
+}
 
-    textarea {
-      width: 75%;
-      margin-top: 10px;
-      padding: 10px;
-      border-radius: 10px;
-      border: none;
-      background: rgba(255,255,255,0.08);
-      color: white;
-    }
+.side-panel.expanded { width:160px; }
 
-    /* BUTTONS */
-    .buttons button {
-      margin: 5px;
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: none;
-      cursor: pointer;
-      backdrop-filter: blur(6px);
-    }
+.panel-content {
+  display:none;
+  flex-direction:column;
+}
 
-    .approve {
-      background: rgba(34,197,94,0.7);
-      color: white;
-    }
+.side-panel.expanded .panel-content { display:flex; }
 
-    .reject {
-      background: rgba(239,68,68,0.7);
-      color: white;
-    }
-
-    /* SIDE PANEL */
-    .side-panel {
-      position: fixed;
-      top: 80px;
-      right: 0;
-      width: 50px;
-      border-radius: 12px 0 0 12px;
-      transition: 0.3s;
-    }
-
-    .side-panel.expanded {
-      width: 180px;
-    }
-
-    .menu-btn {
-      padding: 12px;
-      cursor: pointer;
-      text-align: center;
-      font-size: 18px;
-    }
-
-    .panel-content {
-      display: none;
-      flex-direction: column;
-      padding: 10px;
-    }
-
-    .side-panel.expanded .panel-content {
-      display: flex;
-    }
-
-    .panel-content button {
-      margin: 5px 0;
-      padding: 8px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      background: rgba(255,255,255,0.1);
-      color: white;
-    }
-
-  </style>
+</style>
 </head>
 
 <body>
 
 <script>
 const reviewer = localStorage.getItem("qc_reviewer");
-if (!reviewer) window.location.href = "login.html";
+if (!reviewer) window.location.href="login.html";
 </script>
 
 <div class="header">
@@ -215,63 +152,62 @@ if (!reviewer) window.location.href = "login.html";
 
 <div class="container">
 
-  <!-- SIDEBAR -->
-  <div class="sidebar glass">
+<!-- SIDEBAR -->
+<div class="sidebar glass">
 
-    <div class="filter-row glass">
+  <div class="filter-row glass">
 
-      <select id="enterpriseDropdown">
-        <option value="all">All Enterprises</option>
-      </select>
+    <select id="enterpriseFilter">
+      <option value="all">All Enterprises</option>
+    </select>
 
-      <input type="text" id="enterpriseNameFilter" placeholder="Search Enterprise Name">
+    <select id="qcUserFilter">
+      <option value="all">All QC Users</option>
+    </select>
 
-      <select id="qcUserFilter">
-        <option value="all">All QC Users</option>
-      </select>
+    <select id="statusFilter">
+      <option value="all">All Status</option>
+      <option value="verified">Verified</option>
+      <option value="rejected">Rejected</option>
+    </select>
 
-      <select id="statusFilter">
-        <option value="all">All Status</option>
-        <option value="verified">Verified</option>
-        <option value="rejected">Rejected</option>
-      </select>
+    <input id="videoSearch" placeholder="Video ID">
+    <input id="vinFilter" placeholder="VIN">
+    <input id="skuFilter" placeholder="SKU">
 
-      <input id="videoSearch" placeholder="Video ID">
-      <input id="vinFilter" placeholder="VIN">
-      <input id="skuFilter" placeholder="SKU">
-
-      <button onclick="applyFilter()" class="apply-btn">🔍 Apply</button>
-
-    </div>
-
-    <table id="videoTable"></table>
+    <button class="apply-btn" onclick="applyFilter()">Apply</button>
+    <button id="clearBtn" class="clear-btn" onclick="clearFilters()" style="display:none;">✖</button>
 
   </div>
 
-  <!-- MAIN -->
-  <div class="main">
-
-    <video id="player" controls></video>
-
-    <div id="meta" class="meta glass"></div>
-
-    <div class="buttons">
-      <button class="approve" onclick="markQC('Approved')">Approve (A)</button>
-      <button class="reject" onclick="markQC('Rejected')">Reject (R)</button>
-    </div>
-
-    <textarea id="comment" placeholder="Add comment..."></textarea>
-
-  </div>
+  <table id="videoTable"></table>
 
 </div>
 
-<!-- SIDE PANEL -->
-<div id="sidePanel" class="side-panel glass">
-  <div class="menu-btn" onclick="togglePanel()">☰</div>
+<!-- MAIN -->
+<div class="main">
+
+  <video id="player" controls></video>
+
+  <div id="meta" class="meta glass"></div>
+
+  <div>
+    <button onclick="markQC('Approved')" style="background:green;color:white;">Approve (A)</button>
+    <button onclick="markQC('Rejected')" style="background:red;color:white;">Reject (R)</button>
+  </div>
+
+  <textarea id="comment" placeholder="Add comment..."></textarea>
+
+</div>
+
+</div>
+
+<!-- PANEL -->
+<div id="panel" class="side-panel glass">
+  <div onclick="togglePanel()">☰</div>
   <div class="panel-content">
-    <button onclick="toggleTheme()">🌗 Theme</button>
-    <button onclick="logout()">🚪 Logout</button>
+    <button onclick="toggleTheme()">Theme</button>
+    <button onclick="logout()">Logout</button>
   </div>
 </div>
 
@@ -279,25 +215,44 @@ if (!reviewer) window.location.href = "login.html";
 
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&single=true&output=csv";
 
-let videos = [];
-let filteredVideos = [];
-let currentIndex = 0;
+let videos=[];
+let filteredVideos=[];
+let currentIndex=0;
 
-document.getElementById("userName").innerText = reviewer;
+document.getElementById("userName").innerText=reviewer;
+
+/* CSV PARSER (FIXED) */
+function parseCSV(text){
+  const rows = text.split("\n");
+  return rows.map(row=>{
+    const result=[];
+    let current="", inside=false;
+    for(let char of row){
+      if(char === '"' ){ inside=!inside; continue; }
+      if(char === "," && !inside){
+        result.push(current);
+        current="";
+      } else {
+        current+=char;
+      }
+    }
+    result.push(current);
+    return result;
+  });
+}
 
 /* FETCH */
 fetch(SHEET_URL)
-.then(res => res.text())
-.then(csv => {
+.then(r=>r.text())
+.then(csv=>{
+  const data=parseCSV(csv);
+  const headers=data[0].map(h=>h.trim());
 
-  const rows = csv.split("\n").map(r => r.split(","));
-  const headers = rows[0];
-
-  videos = rows.slice(1).map(row => {
-    let obj = {};
-    headers.forEach((h,i)=> obj[h.trim()] = row[i]);
+  videos=data.slice(1).map(row=>{
+    let obj={};
+    headers.forEach((h,i)=> obj[h]=row[i]);
     return obj;
-  });
+  }).filter(v=>v["v.video_id"] && v["v.video_id"].startsWith("vid-")); // REMOVE GARBAGE
 
   populateFilters();
   applyFilter();
@@ -305,59 +260,70 @@ fetch(SHEET_URL)
 
 /* FILTER OPTIONS */
 function populateFilters(){
-  const qc = new Set();
-  const ent = new Set();
+  const ent=new Set();
+  const qc=new Set();
 
   videos.forEach(v=>{
+    ent.add(v.enterprise_name);
     if(v.qc_user_email_id?.includes("@")) qc.add(v.qc_user_email_id);
-    if(v.enterprise_name) ent.add(v.enterprise_name);
   });
 
+  ent.forEach(v=>addOption("enterpriseFilter",v));
   qc.forEach(v=>addOption("qcUserFilter",v));
-  ent.forEach(v=>addOption("enterpriseDropdown",v));
 }
 
 function addOption(id,val){
-  const opt=document.createElement("option");
-  opt.value=val;
-  opt.textContent=val;
-  document.getElementById(id).appendChild(opt);
+  const o=document.createElement("option");
+  o.value=val;
+  o.textContent=val;
+  document.getElementById(id).appendChild(o);
 }
 
 /* FILTER */
 function applyFilter(){
 
-  const enterpriseDropdown=document.getElementById("enterpriseDropdown").value;
-  const enterpriseName=document.getElementById("enterpriseNameFilter").value.toLowerCase();
-  const qcUser=document.getElementById("qcUserFilter").value;
+  const ent=document.getElementById("enterpriseFilter").value;
+  const qc=document.getElementById("qcUserFilter").value;
   const status=document.getElementById("statusFilter").value;
 
-  const videoSearch=document.getElementById("videoSearch").value.toLowerCase();
+  const vid=document.getElementById("videoSearch").value.toLowerCase();
   const vin=document.getElementById("vinFilter").value.toLowerCase();
   const sku=document.getElementById("skuFilter").value.toLowerCase();
 
   filteredVideos=videos.filter(v=>{
-
-    if(enterpriseDropdown!=="all" && v.enterprise_name!==enterpriseDropdown) return false;
-    if(enterpriseName && !v.enterprise_name.toLowerCase().includes(enterpriseName)) return false;
-
-    if(qcUser!=="all" && v.qc_user_email_id!==qcUser) return false;
+    if(ent!=="all" && v.enterprise_name!==ent) return false;
+    if(qc!=="all" && v.qc_user_email_id!==qc) return false;
     if(status!=="all" && v.verified_status!==status) return false;
 
-    if(videoSearch && !v["v.video_id"]?.toLowerCase().includes(videoSearch)) return false;
+    if(vid && !v["v.video_id"].toLowerCase().includes(vid)) return false;
     if(vin && !v.vin_name?.toLowerCase().includes(vin)) return false;
     if(sku && !v.sku_id?.toLowerCase().includes(sku)) return false;
 
     return true;
   });
 
+  document.getElementById("clearBtn").style.display =
+    (ent!=="all" || qc!=="all" || status!=="all" || vid || vin || sku)
+    ? "block" : "none";
+
   renderTable();
-  if(filteredVideos.length>0) playVideo(0);
+  if(filteredVideos.length) playVideo(0);
+}
+
+/* CLEAR FILTERS */
+function clearFilters(){
+  document.getElementById("enterpriseFilter").value="all";
+  document.getElementById("qcUserFilter").value="all";
+  document.getElementById("statusFilter").value="all";
+  document.getElementById("videoSearch").value="";
+  document.getElementById("vinFilter").value="";
+  document.getElementById("skuFilter").value="";
+  applyFilter();
 }
 
 /* TABLE */
 function renderTable(){
-  let html=`<tr><th>Video</th></tr>`;
+  let html="";
   filteredVideos.forEach((v,i)=>{
     html+=`<tr onclick="playVideo(${i})"><td>${v["v.video_id"]}</td></tr>`;
   });
@@ -376,22 +342,26 @@ function playVideo(i){
     <b>Enterprise:</b> ${v.enterprise_name}<br>
     <b>QC User:</b> ${v.qc_user_email_id}<br>
     <b>Status:</b> ${v.verified_status}<br>
+    ${v.verified_status==="rejected" ? `<b>Reason:</b> ${v.rejected_reason}<br>` : ""}
     <b>Created:</b> ${v.created_on}<br>
     <b>Updated:</b> ${v.updated_on}
   `;
 }
 
-function markQC(status){
-  console.log(status);
-}
-
 /* UI */
 function togglePanel(){
-  document.getElementById("sidePanel").classList.toggle("expanded");
+  document.getElementById("panel").classList.toggle("expanded");
 }
 
+/* THEME FIX */
 function toggleTheme(){
-  document.body.classList.toggle("dark");
+  document.body.classList.toggle("light");
+  localStorage.setItem("theme",document.body.classList.contains("light")?"light":"dark");
+}
+
+/* LOAD THEME */
+if(localStorage.getItem("theme")==="light"){
+  document.body.classList.add("light");
 }
 
 function logout(){
