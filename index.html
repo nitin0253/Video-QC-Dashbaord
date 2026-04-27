@@ -173,11 +173,8 @@ if (!reviewer) window.location.href = "login.html";
   <div class="sidebar">
     <div class="filter">
 
-      <select id="enterpriseIdFilter" onchange="applyFilter()">
-        <option value="all">All Enterprise IDs</option>
-      </select>
-
-      <input type="text" id="enterpriseNameFilter" placeholder="Search Enterprise Name"
+      <input type="text" id="enterpriseNameFilter"
+        placeholder="Search Enterprise Name"
         oninput="applyFilter()">
 
       <select id="qcUserFilter" onchange="applyFilter()">
@@ -193,14 +190,6 @@ if (!reviewer) window.location.href = "login.html";
       <input id="videoSearch" placeholder="Video ID" oninput="applyFilter()">
       <input id="vinFilter" placeholder="VIN" oninput="applyFilter()">
       <input id="skuFilter" placeholder="SKU" oninput="applyFilter()">
-
-      <label>Created Date</label>
-      <input type="date" id="createdFrom" onchange="applyFilter()">
-      <input type="date" id="createdTo" onchange="applyFilter()">
-
-      <label>Updated Date</label>
-      <input type="date" id="updatedFrom" onchange="applyFilter()">
-      <input type="date" id="updatedTo" onchange="applyFilter()">
 
     </div>
 
@@ -233,7 +222,7 @@ if (!reviewer) window.location.href = "login.html";
 
 <script>
 
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&single=true&output=csv";
+const SHEET_URL = "PASTE_YOUR_QC_DATA_GID_URL";
 const API_URL = "PASTE_YOUR_SCRIPT_URL";
 
 let videos = [];
@@ -242,39 +231,71 @@ let currentIndex = 0;
 
 document.getElementById("userName").innerText = reviewer;
 
+/* ✅ FIXED CSV PARSER */
+function parseCSV(str) {
+  const rows = [];
+  let row = [];
+  let current = '';
+  let insideQuotes = false;
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+
+    if (char === '"' && str[i + 1] === '"') {
+      current += '"';
+      i++;
+    } else if (char === '"') {
+      insideQuotes = !insideQuotes;
+    } else if (char === ',' && !insideQuotes) {
+      row.push(current);
+      current = '';
+    } else if (char === '\n' && !insideQuotes) {
+      row.push(current);
+      rows.push(row);
+      row = [];
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  if (current) row.push(current);
+  if (row.length) rows.push(row);
+
+  return rows;
+}
+
+/* FETCH DATA */
 fetch(SHEET_URL)
-  .then(res => res.text())
-  .then(csv => {
-    const parsed = parseCSV(csv);
+.then(res => res.text())
+.then(csv => {
 
-    const headers = parsed[0];
+  const parsed = parseCSV(csv);
+  const headers = parsed[0];
 
-    videos = parsed.slice(1).map(row => {
-      let obj = {};
-      headers.forEach((h, i) => {
-        obj[h.trim()] = row[i];
-      });
-      return obj;
+  videos = parsed.slice(1).map(row => {
+    let obj = {};
+    headers.forEach((h, i) => {
+      obj[h.trim()] = row[i];
     });
-
-    populateFilters();
-    applyFilter();
+    return obj;
   });
 
+  populateFilters();
+  applyFilter();
+});
+
+/* FILTER OPTIONS */
 function populateFilters() {
-  const enterpriseSet = new Set();
   const qcUserSet = new Set();
 
   videos.forEach(v => {
-    if (v["v.enterprise_id"]) enterpriseSet.add(v["v.enterprise_id"]);
-
     if (v.qc_user_email_id && v.qc_user_email_id.includes("@")) {
       qcUserSet.add(v.qc_user_email_id);
     }
   });
 
-  enterpriseSet.forEach(v => addOption("enterpriseIdFilter", v));
-  qcUserSet.forEach(v => addOption("qcUserFilter", v));
+  qcUserSet.forEach(val => addOption("qcUserFilter", val));
 }
 
 function addOption(id, val) {
@@ -284,9 +305,9 @@ function addOption(id, val) {
   document.getElementById(id).appendChild(opt);
 }
 
+/* APPLY FILTER */
 function applyFilter() {
 
-  const enterpriseId = document.getElementById("enterpriseIdFilter").value;
   const enterpriseName = document.getElementById("enterpriseNameFilter").value.toLowerCase();
   const qcUser = document.getElementById("qcUserFilter").value;
   const status = document.getElementById("statusFilter").value;
@@ -295,15 +316,8 @@ function applyFilter() {
   const vin = document.getElementById("vinFilter").value.toLowerCase();
   const sku = document.getElementById("skuFilter").value.toLowerCase();
 
-  const createdFrom = document.getElementById("createdFrom").value;
-  const createdTo = document.getElementById("createdTo").value;
-
-  const updatedFrom = document.getElementById("updatedFrom").value;
-  const updatedTo = document.getElementById("updatedTo").value;
-
   filteredVideos = videos.filter(v => {
 
-    if (enterpriseId !== "all" && v["v.enterprise_id"] !== enterpriseId) return false;
     if (enterpriseName && !v.enterprise_name.toLowerCase().includes(enterpriseName)) return false;
     if (qcUser !== "all" && v.qc_user_email_id !== qcUser) return false;
     if (status !== "all" && v.verified_status !== status) return false;
@@ -311,15 +325,6 @@ function applyFilter() {
     if (videoSearch && !v["v.video_id"].toLowerCase().includes(videoSearch)) return false;
     if (vin && !v.vin_name.toLowerCase().includes(vin)) return false;
     if (sku && !v.sku_id.toLowerCase().includes(sku)) return false;
-
-    const created = new Date(v.created_on.replace(",", ""));
-    const updated = new Date(v.updated_on.replace(",", ""));
-
-    if (createdFrom && created < new Date(createdFrom)) return false;
-    if (createdTo && created > new Date(createdTo)) return false;
-
-    if (updatedFrom && updated < new Date(updatedFrom)) return false;
-    if (updatedTo && updated > new Date(updatedTo)) return false;
 
     return true;
   });
@@ -329,6 +334,7 @@ function applyFilter() {
   if (filteredVideos.length > 0) playVideo(0);
 }
 
+/* TABLE */
 function renderTable() {
   let html = `<tr><th>Video</th></tr>`;
   filteredVideos.forEach((v,i) => {
@@ -337,6 +343,7 @@ function renderTable() {
   document.getElementById("videoTable").innerHTML = html;
 }
 
+/* PLAYER */
 function playVideo(i) {
   currentIndex = i;
   const v = filteredVideos[i];
@@ -353,10 +360,12 @@ function playVideo(i) {
   `;
 }
 
+/* ACTION */
 function markQC(status) {
   console.log("QC:", status);
 }
 
+/* UI */
 function togglePanel() {
   document.getElementById("sidePanel").classList.toggle("expanded");
 }
