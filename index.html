@@ -4,11 +4,25 @@
 <title>QA Dashboard</title>
 
 <style>
+:root {
+  --bg:#0f172a;
+  --panel:#1e293b;
+  --text:#e2e8f0;
+  --border:rgba(255,255,255,0.1);
+}
+
+body.light {
+  --bg:#f1f5f9;
+  --panel:#ffffff;
+  --text:#0f172a;
+  --border:#e2e8f0;
+}
+
 body {
   margin:0;
   font-family: Arial;
-  background:#0f172a;
-  color:white;
+  background:var(--bg);
+  color:var(--text);
 }
 
 /* HEADER */
@@ -17,7 +31,6 @@ body {
   justify-content:space-between;
   padding:12px 20px;
   background:#020617;
-  font-size:18px;
 }
 
 /* LAYOUT */
@@ -31,40 +44,55 @@ body {
   width:30%;
   display:flex;
   flex-direction:column;
-  border-right:1px solid rgba(255,255,255,0.1);
+  border-right:1px solid var(--border);
 }
 
-/* FILTER SECTION (FIXED HEIGHT, NO OVERLAP) */
+/* FILTERS */
 .filters {
-  padding:10px;
-  background:#1e293b;
-  border-bottom:1px solid rgba(255,255,255,0.1);
+  padding:12px;
+  background:var(--panel);
+  border-bottom:1px solid var(--border);
 }
 
-.filters input,
-.filters select {
+/* GRID FIX (alignment issue solved) */
+.filter-grid {
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+}
+
+.filter-grid input,
+.filter-grid select {
   width:100%;
-  padding:8px;
-  margin:5px 0;
-  border-radius:6px;
+  padding:10px;
+  border-radius:8px;
   border:none;
-  background:#334155;
-  color:white;
+  background:rgba(255,255,255,0.08);
+  color:var(--text);
 }
 
-/* BUTTONS */
+/* BUTTON ROW */
+.btn-row {
+  display:flex;
+  gap:10px;
+}
+
 .apply-btn {
+  flex:1;
   background:#2563eb;
   color:white;
-  padding:8px;
-  width:48%;
+  padding:10px;
+  border:none;
+  border-radius:8px;
 }
 
 .clear-btn {
+  flex:1;
   background:#dc2626;
   color:white;
-  padding:8px;
-  width:48%;
+  padding:10px;
+  border:none;
+  border-radius:8px;
 }
 
 /* VIDEO LIST */
@@ -73,19 +101,10 @@ body {
   overflow-y:auto;
 }
 
-.video-list table {
-  width:100%;
-  border-collapse:collapse;
-}
-
 .video-list td {
   padding:10px;
-  border-bottom:1px solid rgba(255,255,255,0.05);
+  border-bottom:1px solid var(--border);
   cursor:pointer;
-}
-
-.video-list tr:hover {
-  background:#1e293b;
 }
 
 /* MAIN */
@@ -103,37 +122,47 @@ video {
 }
 
 .meta {
-  margin-top:10px;
-  background:#1e293b;
-  padding:10px;
-  border-radius:8px;
-  width:75%;
-}
-
-textarea {
   width:75%;
   margin-top:10px;
-  padding:10px;
-  border-radius:6px;
-  border:none;
+  padding:12px;
+  border-radius:10px;
+  background:var(--panel);
 }
 
-/* SIDE PANEL (OLD STYLE RESTORED) */
+/* COLLAPSIBLE PANEL (GMAIL STYLE) */
 .panel {
   position:fixed;
   right:10px;
   top:70px;
 }
 
-.panel button {
-  display:block;
-  margin:5px 0;
-  padding:6px 10px;
-  background:#1e293b;
-  color:white;
+.panel-btn {
+  background:var(--panel);
+  padding:10px;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.panel-content {
+  display:none;
+  margin-top:5px;
+  background:var(--panel);
+  border-radius:8px;
+  padding:8px;
+}
+
+.panel-content button {
+  width:100%;
+  margin:4px 0;
+  padding:8px;
   border:none;
   border-radius:6px;
-  cursor:pointer;
+  background:rgba(255,255,255,0.1);
+  color:var(--text);
+}
+
+.panel.open .panel-content {
+  display:block;
 }
 
 </style>
@@ -156,35 +185,35 @@ if (!reviewer) window.location.href="login.html";
 <!-- SIDEBAR -->
 <div class="sidebar">
 
-  <!-- FILTERS -->
   <div class="filters">
+    <div class="filter-grid">
 
-    <select id="enterpriseFilter">
-      <option value="all">All Enterprises</option>
-    </select>
+      <select id="enterpriseFilter">
+        <option value="all">All Enterprises</option>
+      </select>
 
-    <select id="qcUserFilter">
-      <option value="all">All QC Users</option>
-    </select>
+      <select id="qcUserFilter">
+        <option value="all">All QC Users</option>
+      </select>
 
-    <select id="statusFilter">
-      <option value="all">All Status</option>
-      <option value="verified">Verified</option>
-      <option value="rejected">Rejected</option>
-    </select>
+      <select id="statusFilter">
+        <option value="all">All Status</option>
+        <option value="verified">Verified</option>
+        <option value="rejected">Rejected</option>
+      </select>
 
-    <input id="videoSearch" placeholder="Video ID">
-    <input id="vinFilter" placeholder="VIN">
-    <input id="skuFilter" placeholder="SKU">
+      <input id="videoSearch" placeholder="Video ID">
+      <input id="vinFilter" placeholder="VIN">
+      <input id="skuFilter" placeholder="SKU">
 
-    <div style="display:flex; justify-content:space-between;">
-      <button class="apply-btn" onclick="applyFilter()">Apply</button>
-      <button class="clear-btn" onclick="clearFilters()">Clear</button>
+      <div class="btn-row">
+        <button class="apply-btn" onclick="applyFilter()">Apply</button>
+        <button class="clear-btn" onclick="clearFilters()">Clear</button>
+      </div>
+
     </div>
-
   </div>
 
-  <!-- VIDEO LIST -->
   <div class="video-list">
     <table id="videoTable"></table>
   </div>
@@ -209,39 +238,36 @@ if (!reviewer) window.location.href="login.html";
 
 </div>
 
-<!-- OLD SIMPLE PANEL -->
-<div class="panel">
-  <button onclick="toggleTheme()">Theme</button>
-  <button onclick="logout()">Logout</button>
+<!-- COLLAPSIBLE PANEL -->
+<div id="panel" class="panel">
+  <div class="panel-btn" onclick="togglePanel()">☰</div>
+
+  <div class="panel-content">
+    <button onclick="toggleTheme()">Toggle Theme</button>
+    <button onclick="logout()">Logout</button>
+  </div>
 </div>
 
 <script>
 
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&single=true&output=csv";
 
-let videos=[];
-let filteredVideos=[];
-let currentIndex=0;
+let videos=[], filteredVideos=[], currentIndex=0;
 
 document.getElementById("userName").innerText=reviewer;
-
-/* CSV PARSER FIX */
-function parseCSV(text){
-  return text.split("\n").map(r=>r.split(","));
-}
 
 /* FETCH */
 fetch(SHEET_URL)
 .then(r=>r.text())
 .then(csv=>{
-  const rows=parseCSV(csv);
-  const headers=rows[0];
+  const rows = csv.split("\n").map(r=>r.split(","));
+  const headers = rows[0];
 
-  videos=rows.slice(1).map(row=>{
+  videos = rows.slice(1).map(row=>{
     let obj={};
-    headers.forEach((h,i)=> obj[h]=row[i]);
+    headers.forEach((h,i)=>obj[h]=row[i]);
     return obj;
-  }).filter(v=>v["v.video_id"] && v["v.video_id"].startsWith("vid-"));
+  }).filter(v=>v["v.video_id"]?.startsWith("vid-"));
 
   populateFilters();
   applyFilter();
@@ -249,8 +275,7 @@ fetch(SHEET_URL)
 
 /* FILTER OPTIONS */
 function populateFilters(){
-  const ent=new Set();
-  const qc=new Set();
+  const ent=new Set(), qc=new Set();
 
   videos.forEach(v=>{
     ent.add(v.enterprise_name);
@@ -262,7 +287,7 @@ function populateFilters(){
 }
 
 function addOption(id,val){
-  const o=document.createElement("option");
+  let o=document.createElement("option");
   o.value=val;
   o.textContent=val;
   document.getElementById(id).appendChild(o);
@@ -270,24 +295,21 @@ function addOption(id,val){
 
 /* FILTER */
 function applyFilter(){
+  const ent=enterpriseFilter.value;
+  const qc=qcUserFilter.value;
+  const status=statusFilter.value;
 
-  const ent=document.getElementById("enterpriseFilter").value;
-  const qc=document.getElementById("qcUserFilter").value;
-  const status=document.getElementById("statusFilter").value;
+  const vid=videoSearch.value.toLowerCase();
+  const vin=vinFilter.value.toLowerCase();
+  const sku=skuFilter.value.toLowerCase();
 
-  const vid=document.getElementById("videoSearch").value.toLowerCase();
-  const vin=document.getElementById("vinFilter").value.toLowerCase();
-  const sku=document.getElementById("skuFilter").value.toLowerCase();
-
-  filteredVideos=videos.filter(v=>{
+  filteredVideos = videos.filter(v=>{
     if(ent!=="all" && v.enterprise_name!==ent) return false;
     if(qc!=="all" && v.qc_user_email_id!==qc) return false;
     if(status!=="all" && v.verified_status!==status) return false;
-
     if(vid && !v["v.video_id"].toLowerCase().includes(vid)) return false;
     if(vin && !v.vin_name?.toLowerCase().includes(vin)) return false;
     if(sku && !v.sku_id?.toLowerCase().includes(sku)) return false;
-
     return true;
   });
 
@@ -304,21 +326,17 @@ function clearFilters(){
 
 /* TABLE */
 function renderTable(){
-  let html="";
-  filteredVideos.forEach((v,i)=>{
-    html+=`<tr onclick="playVideo(${i})"><td>${v["v.video_id"]}</td></tr>`;
-  });
-  document.getElementById("videoTable").innerHTML=html;
+  videoTable.innerHTML = filteredVideos.map((v,i)=>
+    `<tr onclick="playVideo(${i})"><td>${v["v.video_id"]}</td></tr>`
+  ).join("");
 }
 
 /* PLAYER */
 function playVideo(i){
-  currentIndex=i;
   const v=filteredVideos[i];
+  player.src=v.video_url;
 
-  document.getElementById("player").src=v.video_url;
-
-  document.getElementById("meta").innerHTML=`
+  meta.innerHTML=`
     <b>Video:</b> ${v["v.video_id"]}<br>
     <b>Enterprise:</b> ${v.enterprise_name}<br>
     <b>QC User:</b> ${v.qc_user_email_id}<br>
@@ -329,20 +347,25 @@ function playVideo(i){
   `;
 }
 
-/* THEME */
+/* PANEL */
+function togglePanel(){
+  document.getElementById("panel").classList.toggle("open");
+}
+
+/* THEME FIX (FULL UI SWITCH) */
 function toggleTheme(){
-  if(document.body.style.background=="white"){
-    document.body.style.background="#0f172a";
-    document.body.style.color="white";
-  } else {
-    document.body.style.background="white";
-    document.body.style.color="black";
-  }
+  document.body.classList.toggle("light");
+  localStorage.setItem("theme",document.body.classList.contains("light")?"light":"dark");
+}
+
+/* LOAD THEME */
+if(localStorage.getItem("theme")==="light"){
+  document.body.classList.add("light");
 }
 
 function logout(){
   localStorage.removeItem("qc_reviewer");
-  window.location.href="login.html";
+  location.href="login.html";
 }
 
 </script>
