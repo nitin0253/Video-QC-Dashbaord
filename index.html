@@ -31,14 +31,15 @@ body {
   justify-content:space-between;
   align-items:center;
   padding:12px 20px;
-  background:rgba(0,0,0,0.6);
+  background:var(--glass);
   backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border);
 }
 
 /* LAYOUT */
 .container {
   display:flex;
-  height:calc(100vh - 50px);
+  height:calc(100vh - 55px);
 }
 
 /* GLASS */
@@ -54,16 +55,17 @@ body {
   width:30%;
   display:flex;
   flex-direction:column;
+  overflow:hidden;
 }
 
 /* FILTERS */
 .filters {
   padding:12px;
-  overflow:hidden;
 }
 
 .filter-grid {
-  display:grid;
+  display:flex;
+  flex-direction:column;
   gap:12px;
 }
 
@@ -76,12 +78,11 @@ body {
   border:none;
   background:rgba(255,255,255,0.12);
   color:var(--text);
-  box-sizing:border-box;
 }
 
 .btn-row {
   display:flex;
-  gap:12px;
+  gap:10px;
 }
 
 .apply-btn,
@@ -155,7 +156,7 @@ video {
   padding:10px;
   margin:5px 0;
   border-radius:10px;
-  background:rgba(255,255,255,0.15);
+  background:var(--glass);
   border:none;
   color:var(--text);
 }
@@ -195,7 +196,6 @@ if (!reviewer) window.location.href="login.html";
 
 <div class="container">
 
-<!-- SIDEBAR -->
 <div class="sidebar">
 
 <div class="filters glass">
@@ -228,7 +228,6 @@ if (!reviewer) window.location.href="login.html";
 
 </div>
 
-<!-- MAIN -->
 <div class="main">
 
 <video id="player" controls></video>
@@ -245,8 +244,8 @@ if (!reviewer) window.location.href="login.html";
 <div id="rejectBox" class="rejection-box glass">
 <b>Quick Reasons:</b><br>
 <button onclick="setReason('Voiceover Issue')">Voiceover</button>
-<button onclick="setReason('Music Issue')">Music</button>
-<button onclick="setReason('removeBG Issue')">removeBG</button>
+<button onclick="setReason('Background Music Issue')">Music</button>
+<button onclick="setReason('Image removeBG Issue')">removeBG</button>
 <button onclick="setReason('Transition Issue')">Transition</button>
 <button onclick="setReason('Data Issue')">Data</button>
 <button onclick="setReason('Image Selection Issue')">Selection</button>
@@ -254,10 +253,8 @@ if (!reviewer) window.location.href="login.html";
 </div>
 
 </div>
-
 </div>
 
-<!-- PANEL -->
 <div id="panel" class="panel">
 <div class="panel-content glass">
 <button onclick="toggleTheme()">Toggle Theme</button>
@@ -268,26 +265,25 @@ if (!reviewer) window.location.href="login.html";
 
 <script>
 
-/* CONFIG */
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&single=true&output=csv";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&output=csv";
 
 let videos = [];
 let filteredVideos = [];
 
-/* LOAD DATA */
 async function loadData() {
 const res = await fetch(SHEET_URL);
 const text = await res.text();
 
 const rows = text.split("\n").map(r => r.split(","));
-const headers = rows[0].map(h => h.trim());
+const headers = rows[0];
 
 const index = {};
-headers.forEach((h,i)=> index[h]=i);
+headers.forEach((h,i)=> index[h.trim()]=i);
 
 videos = rows.slice(1).map(r => ({
 video_id: r[index["v.video_id"]],
 enterprise: r[index["enterprise_name"]],
+enterprise_id: r[index["v.enterprise_id"]],
 qc_user: r[index["qc_user_email_id"]],
 status: r[index["verified_status"]],
 reason: r[index["rejected_reason"]],
@@ -296,7 +292,8 @@ sku: r[index["sku_id"]],
 url: r[index["video_url"]],
 created: r[index["created_on"]],
 updated: r[index["updated_on"]]
-})).filter(v=>v.video_id && v.url);
+}))
+.filter(v => v.video_id && v.video_id.startsWith("vid") && v.url);
 
 filteredVideos = [...videos];
 
@@ -305,25 +302,12 @@ renderVideos();
 updateCount();
 }
 
-/* FILTERS */
 function populateFilters(){
+const ent = [...new Set(videos.map(v=>v.enterprise))];
+const users = [...new Set(videos.map(v=>v.qc_user).filter(u=>u && u.includes("@")))];
 
-  const ent = [...new Set(videos.map(v => v.enterprise))];
-
-  // ✅ FILTER ONLY EMAILS
-  const users = [...new Set(
-    videos
-      .map(v => v.qc_user)
-      .filter(u => u && u.includes("@")) // <-- KEY FIX
-  )];
-
-  enterpriseFilter.innerHTML =
-    `<option value="all">All Enterprises</option>` +
-    ent.map(e => `<option>${e}</option>`).join("");
-
-  qcUserFilter.innerHTML =
-    `<option value="all">All QC Users</option>` +
-    users.map(u => `<option>${u}</option>`).join("");
+enterpriseFilter.innerHTML = `<option value="all">All Enterprises</option>` + ent.map(e=>`<option>${e}</option>`).join("");
+qcUserFilter.innerHTML = `<option value="all">All QC Users</option>` + users.map(u=>`<option>${u}</option>`).join("");
 }
 
 function applyFilter(){
@@ -332,8 +316,8 @@ filteredVideos = videos.filter(v =>
 (qcUserFilter.value==="all" || v.qc_user===qcUserFilter.value) &&
 (statusFilter.value==="all" || v.status===statusFilter.value) &&
 (!videoSearch.value || v.video_id.includes(videoSearch.value)) &&
-(!vinFilter.value || v.vin.includes(vinFilter.value)) &&
-(!skuFilter.value || v.sku.includes(skuFilter.value))
+(!vinFilter.value || (v.vin||"").includes(vinFilter.value)) &&
+(!skuFilter.value || (v.sku||"").includes(skuFilter.value))
 );
 
 renderVideos();
@@ -347,27 +331,22 @@ statusFilter.value="all";
 videoSearch.value="";
 vinFilter.value="";
 skuFilter.value="";
-
 filteredVideos=[...videos];
 renderVideos();
 updateCount();
 }
 
-/* RENDER */
 function renderVideos(){
 videoTable.innerHTML="";
-
 filteredVideos.forEach((v,i)=>{
 const row=document.createElement("tr");
 row.innerHTML=`<td>${v.video_id}</td>`;
 row.onclick=()=>loadVideo(i);
 videoTable.appendChild(row);
 });
-
 if(filteredVideos.length) loadVideo(0);
 }
 
-/* PLAYER */
 function loadVideo(i){
 const v=filteredVideos[i];
 player.src=v.url;
@@ -375,47 +354,44 @@ player.src=v.url;
 meta.innerHTML=`
 <b>Video:</b> ${v.video_id}<br>
 <b>Enterprise:</b> ${v.enterprise}<br>
+<b>Enterprise ID:</b> ${v.enterprise_id || "-"}<br>
 <b>QC User:</b> ${v.qc_user}<br>
 <b>Status:</b> ${v.status}<br>
 ${v.status==="rejected" ? `<b>Reason:</b> ${v.reason}<br>`:""}
+<b>VIN:</b> ${v.vin || "-"}<br>
+<b>SKU:</b> ${v.sku || "-"}<br>
 <b>Created:</b> ${v.created}<br>
 <b>Updated:</b> ${v.updated}
 `;
 }
 
-/* COUNT */
 function updateCount(){
 videoCount.innerText=`Total: ${videos.length} | Filtered: ${filteredVideos.length}`;
 }
 
-/* PANEL */
 function togglePanel(){ panel.classList.toggle("open"); }
 
-/* THEME */
 function toggleTheme(){
 document.body.classList.toggle("light");
 localStorage.setItem("theme",document.body.classList.contains("light")?"light":"dark");
 }
 if(localStorage.getItem("theme")==="light") document.body.classList.add("light");
 
-/* REJECT */
 function markQC(type){
 rejectBox.style.display = (type==="Rejected") ? "block":"none";
 }
+
 function setReason(r){ comment.value=r; }
 
-/* SHORTCUT */
 document.addEventListener("keydown",e=>{
 if(e.key.toLowerCase()==="r") markQC("Rejected");
 });
 
-/* LOGOUT */
 function logout(){
 localStorage.removeItem("qc_reviewer");
 location.href="login.html";
 }
 
-/* INIT */
 userName.innerText=reviewer;
 window.onload=loadData;
 
