@@ -1,30 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
 <title>QA Dashboard</title>
 
 <style>
 :root {
-  --bg: #0f172a;
-  --text: #e2e8f0;
-  --glass: rgba(255,255,255,0.08);
-  --border: rgba(255,255,255,0.15);
+  --bg:#0f172a;
+  --text:#e2e8f0;
+  --glass:rgba(255,255,255,0.08);
+  --border:rgba(255,255,255,0.15);
 }
 
 body.light {
-  --bg: #f1f5f9;
-  --text: #0f172a;
-  --glass: rgba(255,255,255,0.6);
-  --border: rgba(0,0,0,0.1);
+  --bg:#f1f5f9;
+  --text:#0f172a;
+  --glass:rgba(255,255,255,0.6);
+  --border:rgba(0,0,0,0.1);
 }
 
 body {
   margin:0;
-  font-family: Arial;
-  background: var(--bg);
-  color: var(--text);
-  transition: 0.3s;
+  font-family:Arial;
+  background:var(--bg);
+  color:var(--text);
 }
 
 /* HEADER */
@@ -32,51 +30,51 @@ body {
   display:flex;
   justify-content:space-between;
   padding:12px 20px;
-  background:rgba(0,0,0,0.4);
-  backdrop-filter: blur(12px);
-}
-
-/* GLASS */
-.glass {
-  background: var(--glass);
-  backdrop-filter: blur(14px);
-  border:1px solid var(--border);
-  border-radius:12px;
+  background:rgba(0,0,0,0.6);
+  backdrop-filter:blur(10px);
 }
 
 /* LAYOUT */
 .container {
   display:flex;
-  height: calc(100vh - 60px);
+  height:calc(100vh - 50px);
+}
+
+/* GLASS */
+.glass {
+  background:var(--glass);
+  backdrop-filter:blur(14px);
+  border:1px solid var(--border);
+  border-radius:12px;
 }
 
 /* SIDEBAR */
 .sidebar {
-  width:300px;
-  padding:10px;
+  width:30%;
   display:flex;
   flex-direction:column;
 }
 
-/* FILTERS */
+/* FILTER */
 .filters {
-  position:sticky;
-  top:10px;
-  z-index:10;
-  padding:10px;
+  padding:12px;
 }
 
-input, select {
+.filter-grid {
+  display:grid;
+  gap:10px;
+}
+
+.filter-grid input,
+.filter-grid select {
   width:100%;
-  padding:8px;
-  margin-bottom:8px;
-  border:none;
+  padding:10px;
   border-radius:8px;
-  background: var(--glass);
-  color: var(--text);
+  border:none;
+  background:rgba(255,255,255,0.15);
+  color:var(--text);
 }
 
-/* BUTTONS */
 .btn-row {
   display:flex;
   gap:10px;
@@ -86,7 +84,7 @@ input, select {
   flex:1;
   background:#2563eb;
   color:white;
-  padding:8px;
+  padding:10px;
   border:none;
   border-radius:8px;
 }
@@ -95,152 +93,175 @@ input, select {
   flex:1;
   background:#dc2626;
   color:white;
-  padding:8px;
+  padding:10px;
   border:none;
   border-radius:8px;
 }
 
 /* VIDEO LIST */
 .video-list {
-  margin-top:10px;
-  overflow-y:auto;
   flex:1;
+  overflow-y:auto;
 }
 
-.video-item {
+.video-list td {
   padding:10px;
   border-bottom:1px solid var(--border);
   cursor:pointer;
 }
 
-.video-item:hover {
-  background: var(--glass);
-}
-
 /* MAIN */
 .main {
-  flex:1;
+  width:70%;
   padding:20px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
 }
 
 video {
-  width:100%;
-  border-radius:12px;
+  width:75%;
+  border-radius:10px;
 }
 
-/* META */
 .meta {
+  width:75%;
+  padding:12px;
   margin-top:10px;
-  padding:10px;
 }
 
 /* PANEL */
 .panel {
-  position:absolute;
-  right:20px;
-  top:80px;
+  position:fixed;
+  right:15px;
+  top:70px;
+}
+
+.panel-btn {
+  padding:10px;
+  cursor:pointer;
 }
 
 .panel-content {
   display:none;
-  flex-direction:column;
-  gap:10px;
+  margin-top:5px;
   padding:10px;
 }
 
 .panel.open .panel-content {
-  display:flex;
+  display:block;
 }
 
-/* REJECT BOX */
-.reject-box {
+.panel-content button {
+  width:100%;
+  margin:5px 0;
+  padding:8px;
+  border:none;
+  border-radius:8px;
+  background:rgba(255,255,255,0.2);
+  color:var(--text);
+}
+
+/* REJECTION */
+.rejection-box {
   display:none;
   margin-top:10px;
+  width:75%;
   padding:10px;
 }
 
-.reject-box button {
+.rejection-box button {
   margin:4px;
-  padding:6px;
+  padding:6px 10px;
   border:none;
   border-radius:6px;
-  background: var(--glass);
-  color: var(--text);
+  background:#ef4444;
+  color:white;
   cursor:pointer;
 }
+
 </style>
 </head>
 
 <body>
 
+<script>
+const reviewer = localStorage.getItem("qc_reviewer");
+if (!reviewer) window.location.href="login.html";
+</script>
+
 <div class="header">
   <div>🎥 QA Dashboard</div>
-  <div>Logged in: Nitin Kumar</div>
+  <div>Logged in: <b id="userName"></b></div>
 </div>
 
 <div class="container">
 
-  <!-- LEFT -->
-  <div class="sidebar">
+<!-- SIDEBAR -->
+<div class="sidebar">
 
-    <div class="filters glass">
+  <div class="filters glass">
+    <div class="filter-grid">
 
-      <select id="enterprise"></select>
-      <select id="qcUser"></select>
-      <select id="status">
-        <option value="">All Status</option>
+      <select id="enterpriseFilter"></select>
+      <select id="qcUserFilter"></select>
+
+      <select id="statusFilter">
+        <option value="all">All Status</option>
         <option value="verified">Verified</option>
         <option value="rejected">Rejected</option>
       </select>
 
-      <input id="videoId" placeholder="Video ID">
-      <input id="vin" placeholder="VIN">
-      <input id="sku" placeholder="SKU">
+      <input id="videoSearch" placeholder="Video ID">
+      <input id="vinFilter" placeholder="VIN">
+      <input id="skuFilter" placeholder="SKU">
 
       <div class="btn-row">
-        <button class="apply-btn" onclick="applyFilters()">Apply</button>
+        <button class="apply-btn" onclick="applyFilter()">Apply</button>
         <button class="clear-btn" onclick="clearFilters()">Clear</button>
       </div>
 
     </div>
-
-    <div id="videoList" class="video-list"></div>
-
   </div>
 
-  <!-- RIGHT -->
-  <div class="main">
-
-    <video id="player" controls></video>
-
-    <div id="meta" class="meta glass"></div>
-
-    <div style="margin-top:10px;">
-      <button onclick="markQC('Approved')" class="apply-btn">Approve (A)</button>
-      <button onclick="markQC('Rejected')" class="clear-btn">Reject (R)</button>
-    </div>
-
-    <textarea id="comment" style="width:100%;margin-top:10px;" placeholder="Add comment"></textarea>
-
-    <!-- REJECT REASONS -->
-    <div id="rejectBox" class="reject-box glass">
-      <b>Select Reason:</b><br>
-      <button onclick="setReason('Voiceover Issue')">Voiceover</button>
-      <button onclick="setReason('Background Music Issue')">Music</button>
-      <button onclick="setReason('Image removeBG Issue')">removeBG</button>
-      <button onclick="setReason('Transition Issue')">Transition</button>
-      <button onclick="setReason('Data Issue')">Data</button>
-      <button onclick="setReason('Image Selection Issue')">Selection</button>
-      <button onclick="setReason('Repeated Images')">Repeated</button>
-    </div>
-
+  <div class="video-list">
+    <table id="videoTable"></table>
   </div>
 
 </div>
 
+<!-- MAIN -->
+<div class="main">
+
+  <video id="player" controls></video>
+
+  <div id="meta" class="meta glass"></div>
+
+  <div>
+    <button onclick="markQC('Approved')" style="background:green;color:white;">Approve (A)</button>
+    <button onclick="markQC('Rejected')" style="background:red;color:white;">Reject (R)</button>
+  </div>
+
+  <textarea id="comment" placeholder="Add comment..."></textarea>
+
+  <div id="rejectBox" class="rejection-box glass">
+    <b>Quick Reasons:</b><br>
+    <button onclick="setReason('Voiceover Issue')">Voiceover</button>
+    <button onclick="setReason('Music Issue')">Music</button>
+    <button onclick="setReason('removeBG Issue')">removeBG</button>
+    <button onclick="setReason('Transition Issue')">Transition</button>
+    <button onclick="setReason('Data Issue')">Data</button>
+    <button onclick="setReason('Image Selection Issue')">Selection</button>
+    <button onclick="setReason('Repeated Images')">Repeated</button>
+  </div>
+
+</div>
+
+</div>
+
 <!-- PANEL -->
-<div class="panel glass" id="panel">
-  <button onclick="togglePanel()">☰</button>
+<div id="panel" class="panel">
+  <div class="panel-btn glass" onclick="togglePanel()">☰</div>
   <div class="panel-content glass">
     <button onclick="toggleTheme()">Toggle Theme</button>
     <button onclick="logout()">Logout</button>
@@ -249,172 +270,145 @@ video {
 
 <script>
 
+/* ================= CONFIG ================= */
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&single=true&output=csv";
 
+/* ================= STATE ================= */
 let videos = [];
-let filtered = [];
-let index = 0;
+let filteredVideos = [];
 
-/* FETCH */
-async function fetchData() {
+/* ================= LOAD DATA ================= */
+async function loadData() {
   const res = await fetch(SHEET_URL);
   const text = await res.text();
 
-  const rows = text.trim().split("\n").map(row => {
-    const result = [];
-    let current = "";
-    let insideQuotes = false;
-
-    for (let char of row) {
-      if (char === '"') {
-        insideQuotes = !insideQuotes;
-      } else if (char === "," && !insideQuotes) {
-        result.push(current);
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-    result.push(current);
-    return result;
-  });
-
+  const rows = text.split("\n").map(r => r.split(","));
   const headers = rows[0].map(h => h.trim());
 
-  videos = rows.slice(1).map(r => {
-    let obj = {};
-    headers.forEach((h, i) => {
-      obj[h] = r[i] ? r[i].replace(/^"|"$/g, "").trim() : "";
-    });
-    return obj;
-  });
+  const index = {};
+  headers.forEach((h, i) => index[h] = i);
 
-  // ✅ CLEAN DATA (VERY IMPORTANT)
-  videos = videos.filter(v =>
-    v.video_id &&
-    v.video_id.startsWith("vid-") &&
-    v.video_url &&
-    v.video_url.startsWith("http")
-  );
+  videos = rows.slice(1).map(r => ({
+    video_id: r[index["v.video_id"]],
+    enterprise: r[index["enterprise_name"]],
+    qc_user: r[index["qc_user_email_id"]],
+    status: r[index["verified_status"]],
+    reason: r[index["rejected_reason"]],
+    vin: r[index["vin_name"]],
+    sku: r[index["sku_id"]],
+    url: r[index["video_url"]],
+    created: r[index["created_on"]],
+    updated: r[index["updated_on"]]
+  })).filter(v => v.video_id && v.url);
 
-  filtered = videos;
-
-  console.log("Loaded videos:", videos.length);
+  filteredVideos = [...videos];
 
   populateFilters();
-  renderList();
-  playVideo();
+  renderVideos();
 }
 
-/* FILTERS */
-function populateFilters(){
-  const ent = [...new Set(videos.map(v=>v.enterprise_name))];
-  const qc = [...new Set(videos.map(v=>v.qc_user_email_id))];
+/* ================= FILTERS ================= */
+function populateFilters() {
+  const entSet = [...new Set(videos.map(v => v.enterprise))];
+  const userSet = [...new Set(videos.map(v => v.qc_user))];
 
-  document.getElementById("enterprise").innerHTML =
-    "<option value=''>All Enterprises</option>" +
-    ent.map(e=>`<option>${e}</option>`).join("");
+  enterpriseFilter.innerHTML = `<option value="all">All Enterprises</option>` +
+    entSet.map(e => `<option>${e}</option>`).join("");
 
-  document.getElementById("qcUser").innerHTML =
-    "<option value=''>All QC Users</option>" +
-    qc.map(e=>`<option>${e}</option>`).join("");
+  qcUserFilter.innerHTML = `<option value="all">All QC Users</option>` +
+    userSet.map(u => `<option>${u}</option>`).join("");
 }
 
-function applyFilters(){
-  const e = enterprise.value.toLowerCase();
-  const q = qcUser.value;
-  const s = status.value;
-  const vid = videoId.value.toLowerCase();
-  const vinVal = vin.value.toLowerCase();
-  const skuVal = sku.value.toLowerCase();
+function applyFilter() {
+  filteredVideos = videos.filter(v => {
+    return (
+      (enterpriseFilter.value === "all" || v.enterprise === enterpriseFilter.value) &&
+      (qcUserFilter.value === "all" || v.qc_user === qcUserFilter.value) &&
+      (statusFilter.value === "all" || v.status === statusFilter.value) &&
+      (!videoSearch.value || v.video_id.includes(videoSearch.value)) &&
+      (!vinFilter.value || v.vin.includes(vinFilter.value)) &&
+      (!skuFilter.value || v.sku.includes(skuFilter.value))
+    );
+  });
 
-  filtered = videos.filter(v =>
-    (!e || v.enterprise_name.toLowerCase().includes(e)) &&
-    (!q || v.qc_user_email_id===q) &&
-    (!s || v.verified_status===s) &&
-    (!vid || v.video_id.toLowerCase().includes(vid)) &&
-    (!vinVal || v.vin_name.toLowerCase().includes(vinVal)) &&
-    (!skuVal || v.sku_id.toLowerCase().includes(skuVal))
-  );
-
-  index=0;
-  renderList();
-  playVideo();
+  renderVideos();
 }
 
-function clearFilters(){
-  document.querySelectorAll("input,select").forEach(el=>el.value="");
-  filtered = videos;
-  renderList();
+function clearFilters() {
+  enterpriseFilter.value = "all";
+  qcUserFilter.value = "all";
+  statusFilter.value = "all";
+  videoSearch.value = "";
+  vinFilter.value = "";
+  skuFilter.value = "";
+
+  filteredVideos = [...videos];
+  renderVideos();
 }
 
-/* LIST */
-function renderList(){
-  videoList.innerHTML = filtered.map((v,i)=>
-    `<div class="video-item" onclick="selectVideo(${i})">${v.video_id}</div>`
-  ).join("");
+/* ================= RENDER ================= */
+function renderVideos() {
+  videoTable.innerHTML = "";
+
+  filteredVideos.forEach((v, i) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `<td>${v.video_id}</td>`;
+    row.onclick = () => loadVideo(i);
+    videoTable.appendChild(row);
+  });
+
+  if (filteredVideos.length) loadVideo(0);
 }
 
-function selectVideo(i){
-  index=i;
-  playVideo();
-}
+/* ================= PLAYER ================= */
+function loadVideo(i) {
+  const v = filteredVideos[i];
 
-/* PLAYER */
-function playVideo(){
-  const v = filtered[index];
-  if(!v) return;
-
-  player.src = v.video_url;
+  player.src = v.url;
 
   meta.innerHTML = `
     <b>Video:</b> ${v.video_id}<br>
-    <b>Enterprise:</b> ${v.enterprise_name}<br>
-    <b>QC User:</b> ${v.qc_user_email_id}<br>
-    <b>Status:</b> ${v.verified_status}<br>
-    ${v.verified_status==="rejected" ? `<b>Reason:</b> ${v.rejected_reason}<br>` : ""}
-    <b>Created:</b> ${v.created_on}<br>
-    <b>Updated:</b> ${v.updated_on}
+    <b>Enterprise:</b> ${v.enterprise}<br>
+    <b>QC User:</b> ${v.qc_user}<br>
+    <b>Status:</b> ${v.status}<br>
+    ${v.status === "rejected" ? `<b>Reason:</b> ${v.reason}<br>` : ""}
+    <b>Created:</b> ${v.created}<br>
+    <b>Updated:</b> ${v.updated}
   `;
 }
 
-/* QC */
-function markQC(type){
-  if(type==="Rejected"){
-    rejectBox.style.display="block";
-  } else {
-    rejectBox.style.display="none";
-    alert("Approved");
-  }
-}
-
-function setReason(r){
-  comment.value = r;
-}
-
-/* PANEL */
-function togglePanel(){
+/* ================= PANEL ================= */
+function togglePanel() {
   panel.classList.toggle("open");
 }
 
-/* THEME */
-function toggleTheme(){
+/* ================= THEME ================= */
+function toggleTheme() {
   document.body.classList.toggle("light");
-  localStorage.setItem("theme",
-    document.body.classList.contains("light")?"light":"dark"
-  );
+  localStorage.setItem("theme", document.body.classList.contains("light") ? "light" : "dark");
 }
 
-if(localStorage.getItem("theme")==="light"){
+if (localStorage.getItem("theme") === "light") {
   document.body.classList.add("light");
 }
 
-/* LOGOUT */
-function logout(){
-  alert("Logged out");
+/* ================= REJECT ================= */
+function markQC(type) {
+  rejectBox.style.display = (type === "Rejected") ? "block" : "none";
 }
 
-fetchData();
+function setReason(r) {
+  comment.value = r;
+}
+
+/* ================= SHORTCUT ================= */
+document.addEventListener("keydown", e => {
+  if (e.key.toLowerCase() === "r") markQC("Rejected");
+});
+
+/* ================= INIT ================= */
+document.getElementById("userName").innerText = reviewer;
+window.onload = loadData;
 
 </script>
 
