@@ -243,20 +243,23 @@ let currentIndex = 0;
 document.getElementById("userName").innerText = reviewer;
 
 fetch(SHEET_URL)
-.then(res => res.text())
-.then(csv => {
-  const rows = csv.split("\n").map(r => r.split(","));
-  const headers = rows[0];
+  .then(res => res.text())
+  .then(csv => {
+    const parsed = parseCSV(csv);
 
-  videos = rows.slice(1).map(r => {
-    let obj = {};
-    headers.forEach((h,i)=> obj[h.trim()] = r[i]);
-    return obj;
+    const headers = parsed[0];
+
+    videos = parsed.slice(1).map(row => {
+      let obj = {};
+      headers.forEach((h, i) => {
+        obj[h.trim()] = row[i];
+      });
+      return obj;
+    });
+
+    populateFilters();
+    applyFilter();
   });
-
-  populateFilters();
-  applyFilter();
-});
 
 function populateFilters() {
   const enterpriseSet = new Set();
