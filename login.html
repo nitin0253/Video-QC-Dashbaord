@@ -5,29 +5,34 @@
 
   <style>
     body {
+      margin: 0;
       font-family: Arial;
-      background: #111;
-      color: white;
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      margin: 0;
+
+      /* 🌄 Background image */
+      background: url('https://spyne-prod-tech.s3.amazonaws.com/api/upload/input_04c890b3-7f01-47e0-ad36-21b38730b1d5.jpg') no-repeat center center/cover;
     }
 
+    /* 🌫 Glass container */
     .box {
-      background: #222;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border-radius: 16px;
       padding: 30px;
-      border-radius: 12px;
-      text-align: center;
       width: 320px;
+      text-align: center;
+      color: white;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     }
 
     h2 {
       margin-bottom: 20px;
     }
 
-    /* ✅ Uniform styling */
     select, input, button {
       width: 100%;
       padding: 14px;
@@ -39,7 +44,7 @@
     }
 
     select, input {
-      background: #e5e5e5;
+      background: rgba(255,255,255,0.8);
     }
 
     button {
@@ -54,9 +59,8 @@
     }
 
     #error {
-      color: red;
+      color: #ff6b6b;
       font-size: 13px;
-      margin-top: 5px;
     }
 
   </style>
@@ -75,7 +79,7 @@
     <option>Rahul Raj</option>
   </select>
 
-  <input type="password" id="password" placeholder="Enter password" />
+  <input type="password" id="password" placeholder="Enter password">
 
   <button onclick="login()">Login</button>
 
@@ -84,10 +88,8 @@
 
 <script>
 
-// 🔐 Password rule: FirstName@987
 function getExpectedPassword(fullName) {
-  const firstName = fullName.split(" ")[0];
-  return firstName + "@987";
+  return fullName.split(" ")[0] + "@987";
 }
 
 function login() {
@@ -95,13 +97,11 @@ function login() {
   const pass = document.getElementById("password").value;
 
   if (!user || !pass) {
-    document.getElementById("error").innerText = "Please fill all fields";
+    document.getElementById("error").innerText = "Fill all fields";
     return;
   }
 
-  const expectedPassword = getExpectedPassword(user);
-
-  if (pass === expectedPassword) {
+  if (pass === getExpectedPassword(user)) {
     localStorage.setItem("qc_reviewer", user);
     window.location.href = "index.html";
   } else {
@@ -109,18 +109,9 @@ function login() {
   }
 }
 
-// ✅ Enter key support (password → login)
-document.getElementById("password").addEventListener("keypress", function(e) {
-  if (e.key === "Enter") {
-    login();
-  }
-});
-
-// ✅ Enter key on dropdown → move to password
-document.getElementById("user").addEventListener("keypress", function(e) {
-  if (e.key === "Enter") {
-    document.getElementById("password").focus();
-  }
+// Enter key login
+document.getElementById("password").addEventListener("keypress", e => {
+  if (e.key === "Enter") login();
 });
 
 </script>
