@@ -4,90 +4,89 @@
 <title>QA Dashboard</title>
 
 <style>
-* { box-sizing: border-box; }
-
 body {
-  margin: 0;
-  font-family: 'Segoe UI';
-  background: linear-gradient(135deg,#0f172a,#1e293b);
-  color: #e2e8f0;
-}
-
-/* LIGHT THEME */
-body.light {
-  background: #f1f5f9;
-  color: #0f172a;
+  margin:0;
+  font-family: Arial;
+  background:#0f172a;
+  color:white;
 }
 
 /* HEADER */
 .header {
   display:flex;
   justify-content:space-between;
-  padding:15px;
-  background: rgba(0,0,0,0.6);
+  padding:12px 20px;
+  background:#020617;
+  font-size:18px;
 }
 
 /* LAYOUT */
-.container { display:flex; height:calc(100vh - 60px); }
-
-/* GLASS */
-.glass {
-  background: rgba(255,255,255,0.06);
-  backdrop-filter: blur(12px);
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.1);
+.container {
+  display:flex;
+  height:calc(100vh - 50px);
 }
 
 /* SIDEBAR */
 .sidebar {
   width:30%;
-  padding:10px;
-  overflow-y:auto;
-}
-
-/* STICKY FILTER BAR */
-.filter-row {
-  position: sticky;
-  top: 0;
-  z-index: 10;
   display:flex;
-  flex-wrap:wrap;
-  gap:8px;
+  flex-direction:column;
+  border-right:1px solid rgba(255,255,255,0.1);
+}
+
+/* FILTER SECTION (FIXED HEIGHT, NO OVERLAP) */
+.filters {
   padding:10px;
-  margin-bottom:10px;
+  background:#1e293b;
+  border-bottom:1px solid rgba(255,255,255,0.1);
 }
 
-/* INPUTS */
-input, select {
+.filters input,
+.filters select {
+  width:100%;
   padding:8px;
-  border-radius:8px;
+  margin:5px 0;
+  border-radius:6px;
   border:none;
-  background:rgba(255,255,255,0.08);
+  background:#334155;
   color:white;
-  min-width:130px;
-}
-
-body.light input,
-body.light select {
-  background:#fff;
-  color:#000;
 }
 
 /* BUTTONS */
-button {
-  border:none;
-  padding:8px 12px;
-  border-radius:8px;
+.apply-btn {
+  background:#2563eb;
+  color:white;
+  padding:8px;
+  width:48%;
+}
+
+.clear-btn {
+  background:#dc2626;
+  color:white;
+  padding:8px;
+  width:48%;
+}
+
+/* VIDEO LIST */
+.video-list {
+  flex:1;
+  overflow-y:auto;
+}
+
+.video-list table {
+  width:100%;
+  border-collapse:collapse;
+}
+
+.video-list td {
+  padding:10px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
   cursor:pointer;
 }
 
-.apply-btn { background:#2563eb; color:white; }
-.clear-btn { background:#ef4444; color:white; }
-
-/* TABLE */
-table { width:100%; border-collapse:collapse; }
-td { padding:10px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; }
-tr:hover { background:rgba(255,255,255,0.05); }
+.video-list tr:hover {
+  background:#1e293b;
+}
 
 /* MAIN */
 .main {
@@ -100,40 +99,42 @@ tr:hover { background:rgba(255,255,255,0.05); }
 
 video {
   width:75%;
-  border-radius:12px;
+  border-radius:10px;
 }
 
 .meta {
-  width:75%;
   margin-top:10px;
-  padding:12px;
+  background:#1e293b;
+  padding:10px;
+  border-radius:8px;
+  width:75%;
 }
 
 textarea {
   width:75%;
   margin-top:10px;
   padding:10px;
-  border-radius:8px;
+  border-radius:6px;
   border:none;
 }
 
-/* PANEL */
-.side-panel {
+/* SIDE PANEL (OLD STYLE RESTORED) */
+.panel {
   position:fixed;
-  right:0;
-  top:80px;
-  width:50px;
-  transition:0.3s;
+  right:10px;
+  top:70px;
 }
 
-.side-panel.expanded { width:160px; }
-
-.panel-content {
-  display:none;
-  flex-direction:column;
+.panel button {
+  display:block;
+  margin:5px 0;
+  padding:6px 10px;
+  background:#1e293b;
+  color:white;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
 }
-
-.side-panel.expanded .panel-content { display:flex; }
 
 </style>
 </head>
@@ -153,9 +154,10 @@ if (!reviewer) window.location.href="login.html";
 <div class="container">
 
 <!-- SIDEBAR -->
-<div class="sidebar glass">
+<div class="sidebar">
 
-  <div class="filter-row glass">
+  <!-- FILTERS -->
+  <div class="filters">
 
     <select id="enterpriseFilter">
       <option value="all">All Enterprises</option>
@@ -175,12 +177,17 @@ if (!reviewer) window.location.href="login.html";
     <input id="vinFilter" placeholder="VIN">
     <input id="skuFilter" placeholder="SKU">
 
-    <button class="apply-btn" onclick="applyFilter()">Apply</button>
-    <button id="clearBtn" class="clear-btn" onclick="clearFilters()" style="display:none;">✖</button>
+    <div style="display:flex; justify-content:space-between;">
+      <button class="apply-btn" onclick="applyFilter()">Apply</button>
+      <button class="clear-btn" onclick="clearFilters()">Clear</button>
+    </div>
 
   </div>
 
-  <table id="videoTable"></table>
+  <!-- VIDEO LIST -->
+  <div class="video-list">
+    <table id="videoTable"></table>
+  </div>
 
 </div>
 
@@ -189,7 +196,7 @@ if (!reviewer) window.location.href="login.html";
 
   <video id="player" controls></video>
 
-  <div id="meta" class="meta glass"></div>
+  <div id="meta" class="meta"></div>
 
   <div>
     <button onclick="markQC('Approved')" style="background:green;color:white;">Approve (A)</button>
@@ -202,13 +209,10 @@ if (!reviewer) window.location.href="login.html";
 
 </div>
 
-<!-- PANEL -->
-<div id="panel" class="side-panel glass">
-  <div onclick="togglePanel()">☰</div>
-  <div class="panel-content">
-    <button onclick="toggleTheme()">Theme</button>
-    <button onclick="logout()">Logout</button>
-  </div>
+<!-- OLD SIMPLE PANEL -->
+<div class="panel">
+  <button onclick="toggleTheme()">Theme</button>
+  <button onclick="logout()">Logout</button>
 </div>
 
 <script>
@@ -221,38 +225,23 @@ let currentIndex=0;
 
 document.getElementById("userName").innerText=reviewer;
 
-/* CSV PARSER (FIXED) */
+/* CSV PARSER FIX */
 function parseCSV(text){
-  const rows = text.split("\n");
-  return rows.map(row=>{
-    const result=[];
-    let current="", inside=false;
-    for(let char of row){
-      if(char === '"' ){ inside=!inside; continue; }
-      if(char === "," && !inside){
-        result.push(current);
-        current="";
-      } else {
-        current+=char;
-      }
-    }
-    result.push(current);
-    return result;
-  });
+  return text.split("\n").map(r=>r.split(","));
 }
 
 /* FETCH */
 fetch(SHEET_URL)
 .then(r=>r.text())
 .then(csv=>{
-  const data=parseCSV(csv);
-  const headers=data[0].map(h=>h.trim());
+  const rows=parseCSV(csv);
+  const headers=rows[0];
 
-  videos=data.slice(1).map(row=>{
+  videos=rows.slice(1).map(row=>{
     let obj={};
     headers.forEach((h,i)=> obj[h]=row[i]);
     return obj;
-  }).filter(v=>v["v.video_id"] && v["v.video_id"].startsWith("vid-")); // REMOVE GARBAGE
+  }).filter(v=>v["v.video_id"] && v["v.video_id"].startsWith("vid-"));
 
   populateFilters();
   applyFilter();
@@ -302,22 +291,14 @@ function applyFilter(){
     return true;
   });
 
-  document.getElementById("clearBtn").style.display =
-    (ent!=="all" || qc!=="all" || status!=="all" || vid || vin || sku)
-    ? "block" : "none";
-
   renderTable();
   if(filteredVideos.length) playVideo(0);
 }
 
-/* CLEAR FILTERS */
+/* CLEAR */
 function clearFilters(){
-  document.getElementById("enterpriseFilter").value="all";
-  document.getElementById("qcUserFilter").value="all";
-  document.getElementById("statusFilter").value="all";
-  document.getElementById("videoSearch").value="";
-  document.getElementById("vinFilter").value="";
-  document.getElementById("skuFilter").value="";
+  document.querySelectorAll("input").forEach(i=>i.value="");
+  document.querySelectorAll("select").forEach(s=>s.value="all");
   applyFilter();
 }
 
@@ -348,20 +329,15 @@ function playVideo(i){
   `;
 }
 
-/* UI */
-function togglePanel(){
-  document.getElementById("panel").classList.toggle("expanded");
-}
-
-/* THEME FIX */
+/* THEME */
 function toggleTheme(){
-  document.body.classList.toggle("light");
-  localStorage.setItem("theme",document.body.classList.contains("light")?"light":"dark");
-}
-
-/* LOAD THEME */
-if(localStorage.getItem("theme")==="light"){
-  document.body.classList.add("light");
+  if(document.body.style.background=="white"){
+    document.body.style.background="#0f172a";
+    document.body.style.color="white";
+  } else {
+    document.body.style.background="white";
+    document.body.style.color="black";
+  }
 }
 
 function logout(){
