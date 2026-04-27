@@ -64,7 +64,8 @@ body {
 }
 
 .filter-grid {
-  display:grid;
+  display:flex;
+  flex-direction:column;
   gap:12px;
 }
 
@@ -78,8 +79,6 @@ body {
   outline:none;
   background:rgba(255,255,255,0.12);
   color:var(--text);
-  font-size:14px;
-  box-sizing:border-box;
 }
 
 .btn-row {
@@ -89,8 +88,11 @@ body {
 
 .apply-btn,
 .clear-btn {
+  flex:1;
   height:42px;
   border-radius:10px;
+  border:none;
+  color:white;
 }
 
 .apply-btn { background:#2563eb; }
@@ -144,6 +146,8 @@ video {
   display:none;
   margin-bottom:10px;
   padding:10px;
+  background:var(--glass);
+  backdrop-filter:blur(12px);
 }
 
 .panel.open .panel-content {
@@ -175,6 +179,16 @@ video {
   border-radius:6px;
   background:#ef4444;
   color:white;
+}
+
+textarea {
+  width:75%;
+  margin-top:10px;
+  padding:10px;
+  border-radius:10px;
+  background:var(--glass);
+  border:1px solid var(--border);
+  color:var(--text);
 }
 
 </style>
@@ -264,6 +278,23 @@ if (!reviewer) window.location.href="login.html";
 
 <script>
 
+/* ✅ FIXED CSV PARSER */
+function parseCSV(text){
+  const rows = text.split("\n");
+  const headers = rows[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+
+  return rows.slice(1).map(row=>{
+    const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+
+    let obj = {};
+    headers.forEach((h,i)=>{
+      obj[h.trim()] = cols[i]?.replace(/^"|"$/g,"");
+    });
+
+    return obj;
+  });
+}
+
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&output=csv";
 
 let videos = [];
@@ -273,24 +304,20 @@ async function loadData() {
 const res = await fetch(SHEET_URL);
 const text = await res.text();
 
-const rows = text.split("\n").map(r => r.split(","));
-const headers = rows[0];
+const data = parseCSV(text);
 
-const index = {};
-headers.forEach((h,i)=> index[h.trim()]=i);
-
-videos = rows.slice(1).map(r => ({
-video_id: r[index["v.video_id"]],
-enterprise: r[index["enterprise_name"]],
-enterprise_id: r[index["v.enterprise_id"]],
-qc_user: r[index["qc_user_email_id"]],
-status: r[index["verified_status"]],
-reason: r[index["rejected_reason"]],
-vin: r[index["vin_name"]],
-sku: r[index["sku_id"]],
-url: r[index["video_url"]],
-created: r[index["created_on"]],
-updated: r[index["updated_on"]]
+videos = data.map(r => ({
+video_id: r["v.video_id"],
+enterprise: r["enterprise_name"],
+enterprise_id: r["v.enterprise_id"],
+qc_user: r["qc_user_email_id"],
+status: r["verified_status"],
+reason: r["rejected_reason"],
+vin: r["vin_name"],
+sku: r["sku_id"],
+url: r["video_url"],
+created: r["created_on"],
+updated: r["updated_on"]
 }))
 .filter(v => v.video_id && v.video_id.startsWith("vid") && v.url);
 
