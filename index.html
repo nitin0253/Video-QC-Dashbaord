@@ -9,77 +9,115 @@
     body {
       margin: 0;
       font-family: 'Segoe UI', Arial;
-      background: #f4f6f8;
-    }
-
-    body.dark {
-      background: #0f172a;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
       color: #e2e8f0;
     }
 
+    /* HEADER */
     .header {
       display: flex;
       justify-content: space-between;
       padding: 15px 20px;
-      background: #111;
-      color: white;
+      backdrop-filter: blur(12px);
+      background: rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
     }
 
+    /* LAYOUT */
     .container {
       display: flex;
       height: calc(100vh - 60px);
     }
 
+    /* GLASS BASE */
+    .glass {
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(12px);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* SIDEBAR */
     .sidebar {
-      width: 28%;
-      background: white;
-      overflow-y: auto;
-      border-right: 1px solid #ddd;
-    }
-
-    body.dark .sidebar {
-      background: #1e293b;
-    }
-
-    .filter {
+      width: 30%;
       padding: 10px;
+      overflow-y: auto;
     }
 
-    .filter input, .filter select {
-      width: 100%;
-      margin: 5px 0;
-      padding: 6px;
-      border-radius: 6px;
+    /* FILTER ROW */
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
     }
 
+    .filter-row input,
+    .filter-row select {
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      background: rgba(255,255,255,0.08);
+      color: white;
+      backdrop-filter: blur(6px);
+      min-width: 140px;
+    }
+
+    .filter-row input::placeholder {
+      color: #cbd5f5;
+    }
+
+    .apply-btn {
+      background: rgba(37,99,235,0.8);
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .apply-btn:hover {
+      background: rgba(37,99,235,1);
+    }
+
+    /* TABLE */
     table {
       width: 100%;
       border-collapse: collapse;
     }
 
     th {
-      background: #222;
-      color: white;
-      padding: 8px;
+      padding: 10px;
+      text-align: left;
+      background: rgba(255,255,255,0.08);
     }
 
     td {
-      padding: 8px;
-      border-bottom: 1px solid #eee;
+      padding: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
       cursor: pointer;
     }
 
+    tr:hover {
+      background: rgba(255,255,255,0.05);
+    }
+
+    /* MAIN */
     .main {
-      width: 72%;
+      width: 70%;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding-top: 20px;
+      padding: 20px;
     }
 
     video {
       width: 75%;
-      border-radius: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.2);
       margin-top: 10px;
     }
 
@@ -87,30 +125,37 @@
       width: 75%;
       margin-top: 10px;
       padding: 12px;
-      border-radius: 10px;
-      background: white;
-    }
-
-    body.dark .meta {
-      background: #1e293b;
     }
 
     textarea {
       width: 75%;
       margin-top: 10px;
       padding: 10px;
+      border-radius: 10px;
+      border: none;
+      background: rgba(255,255,255,0.08);
+      color: white;
     }
 
+    /* BUTTONS */
     .buttons button {
       margin: 5px;
-      padding: 10px;
-      border-radius: 6px;
+      padding: 10px 14px;
+      border-radius: 10px;
       border: none;
       cursor: pointer;
+      backdrop-filter: blur(6px);
     }
 
-    .approve { background: green; color: white; }
-    .reject { background: red; color: white; }
+    .approve {
+      background: rgba(34,197,94,0.7);
+      color: white;
+    }
+
+    .reject {
+      background: rgba(239,68,68,0.7);
+      color: white;
+    }
 
     /* SIDE PANEL */
     .side-panel {
@@ -118,9 +163,7 @@
       top: 80px;
       right: 0;
       width: 50px;
-      background: #fff;
-      border-radius: 10px 0 0 10px;
-      box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+      border-radius: 12px 0 0 12px;
       transition: 0.3s;
     }
 
@@ -132,7 +175,7 @@
       padding: 12px;
       cursor: pointer;
       text-align: center;
-      font-size: 20px;
+      font-size: 18px;
     }
 
     .panel-content {
@@ -148,8 +191,11 @@
     .panel-content button {
       margin: 5px 0;
       padding: 8px;
-      border-radius: 6px;
+      border-radius: 8px;
+      border: none;
       cursor: pointer;
+      background: rgba(255,255,255,0.1);
+      color: white;
     }
 
   </style>
@@ -169,37 +215,45 @@ if (!reviewer) window.location.href = "login.html";
 
 <div class="container">
 
-  <!-- FILTERS -->
-  <div class="sidebar">
-    <div class="filter">
+  <!-- SIDEBAR -->
+  <div class="sidebar glass">
 
-      <input type="text" id="enterpriseNameFilter"
-        placeholder="Search Enterprise Name"
-        oninput="applyFilter()">
+    <div class="filter-row glass">
 
-      <select id="qcUserFilter" onchange="applyFilter()">
+      <select id="enterpriseDropdown">
+        <option value="all">All Enterprises</option>
+      </select>
+
+      <input type="text" id="enterpriseNameFilter" placeholder="Search Enterprise Name">
+
+      <select id="qcUserFilter">
         <option value="all">All QC Users</option>
       </select>
 
-      <select id="statusFilter" onchange="applyFilter()">
+      <select id="statusFilter">
         <option value="all">All Status</option>
         <option value="verified">Verified</option>
         <option value="rejected">Rejected</option>
       </select>
 
-      <input id="videoSearch" placeholder="Video ID" oninput="applyFilter()">
-      <input id="vinFilter" placeholder="VIN" oninput="applyFilter()">
-      <input id="skuFilter" placeholder="SKU" oninput="applyFilter()">
+      <input id="videoSearch" placeholder="Video ID">
+      <input id="vinFilter" placeholder="VIN">
+      <input id="skuFilter" placeholder="SKU">
+
+      <button onclick="applyFilter()" class="apply-btn">🔍 Apply</button>
 
     </div>
 
     <table id="videoTable"></table>
+
   </div>
 
-  <!-- PLAYER -->
+  <!-- MAIN -->
   <div class="main">
+
     <video id="player" controls></video>
-    <div id="meta" class="meta"></div>
+
+    <div id="meta" class="meta glass"></div>
 
     <div class="buttons">
       <button class="approve" onclick="markQC('Approved')">Approve (A)</button>
@@ -207,12 +261,13 @@ if (!reviewer) window.location.href = "login.html";
     </div>
 
     <textarea id="comment" placeholder="Add comment..."></textarea>
+
   </div>
 
 </div>
 
 <!-- SIDE PANEL -->
-<div id="sidePanel" class="side-panel">
+<div id="sidePanel" class="side-panel glass">
   <div class="menu-btn" onclick="togglePanel()">☰</div>
   <div class="panel-content">
     <button onclick="toggleTheme()">🌗 Theme</button>
@@ -223,7 +278,6 @@ if (!reviewer) window.location.href = "login.html";
 <script>
 
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&single=true&output=csv";
-const API_URL = "PASTE_YOUR_SCRIPT_URL";
 
 let videos = [];
 let filteredVideos = [];
@@ -231,53 +285,17 @@ let currentIndex = 0;
 
 document.getElementById("userName").innerText = reviewer;
 
-/* ✅ FIXED CSV PARSER */
-function parseCSV(str) {
-  const rows = [];
-  let row = [];
-  let current = '';
-  let insideQuotes = false;
-
-  for (let i = 0; i < str.length; i++) {
-    const char = str[i];
-
-    if (char === '"' && str[i + 1] === '"') {
-      current += '"';
-      i++;
-    } else if (char === '"') {
-      insideQuotes = !insideQuotes;
-    } else if (char === ',' && !insideQuotes) {
-      row.push(current);
-      current = '';
-    } else if (char === '\n' && !insideQuotes) {
-      row.push(current);
-      rows.push(row);
-      row = [];
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-
-  if (current) row.push(current);
-  if (row.length) rows.push(row);
-
-  return rows;
-}
-
-/* FETCH DATA */
+/* FETCH */
 fetch(SHEET_URL)
 .then(res => res.text())
 .then(csv => {
 
-  const parsed = parseCSV(csv);
-  const headers = parsed[0];
+  const rows = csv.split("\n").map(r => r.split(","));
+  const headers = rows[0];
 
-  videos = parsed.slice(1).map(row => {
+  videos = rows.slice(1).map(row => {
     let obj = {};
-    headers.forEach((h, i) => {
-      obj[h.trim()] = row[i];
-    });
+    headers.forEach((h,i)=> obj[h.trim()] = row[i]);
     return obj;
   });
 
@@ -286,71 +304,74 @@ fetch(SHEET_URL)
 });
 
 /* FILTER OPTIONS */
-function populateFilters() {
-  const qcUserSet = new Set();
+function populateFilters(){
+  const qc = new Set();
+  const ent = new Set();
 
-  videos.forEach(v => {
-    if (v.qc_user_email_id && v.qc_user_email_id.includes("@")) {
-      qcUserSet.add(v.qc_user_email_id);
-    }
+  videos.forEach(v=>{
+    if(v.qc_user_email_id?.includes("@")) qc.add(v.qc_user_email_id);
+    if(v.enterprise_name) ent.add(v.enterprise_name);
   });
 
-  qcUserSet.forEach(val => addOption("qcUserFilter", val));
+  qc.forEach(v=>addOption("qcUserFilter",v));
+  ent.forEach(v=>addOption("enterpriseDropdown",v));
 }
 
-function addOption(id, val) {
-  const opt = document.createElement("option");
-  opt.value = val;
-  opt.textContent = val;
+function addOption(id,val){
+  const opt=document.createElement("option");
+  opt.value=val;
+  opt.textContent=val;
   document.getElementById(id).appendChild(opt);
 }
 
-/* APPLY FILTER */
-function applyFilter() {
+/* FILTER */
+function applyFilter(){
 
-  const enterpriseName = document.getElementById("enterpriseNameFilter").value.toLowerCase();
-  const qcUser = document.getElementById("qcUserFilter").value;
-  const status = document.getElementById("statusFilter").value;
+  const enterpriseDropdown=document.getElementById("enterpriseDropdown").value;
+  const enterpriseName=document.getElementById("enterpriseNameFilter").value.toLowerCase();
+  const qcUser=document.getElementById("qcUserFilter").value;
+  const status=document.getElementById("statusFilter").value;
 
-  const videoSearch = document.getElementById("videoSearch").value.toLowerCase();
-  const vin = document.getElementById("vinFilter").value.toLowerCase();
-  const sku = document.getElementById("skuFilter").value.toLowerCase();
+  const videoSearch=document.getElementById("videoSearch").value.toLowerCase();
+  const vin=document.getElementById("vinFilter").value.toLowerCase();
+  const sku=document.getElementById("skuFilter").value.toLowerCase();
 
-  filteredVideos = videos.filter(v => {
+  filteredVideos=videos.filter(v=>{
 
-    if (enterpriseName && !v.enterprise_name.toLowerCase().includes(enterpriseName)) return false;
-    if (qcUser !== "all" && v.qc_user_email_id !== qcUser) return false;
-    if (status !== "all" && v.verified_status !== status) return false;
+    if(enterpriseDropdown!=="all" && v.enterprise_name!==enterpriseDropdown) return false;
+    if(enterpriseName && !v.enterprise_name.toLowerCase().includes(enterpriseName)) return false;
 
-    if (videoSearch && !v["v.video_id"].toLowerCase().includes(videoSearch)) return false;
-    if (vin && !v.vin_name.toLowerCase().includes(vin)) return false;
-    if (sku && !v.sku_id.toLowerCase().includes(sku)) return false;
+    if(qcUser!=="all" && v.qc_user_email_id!==qcUser) return false;
+    if(status!=="all" && v.verified_status!==status) return false;
+
+    if(videoSearch && !v["v.video_id"]?.toLowerCase().includes(videoSearch)) return false;
+    if(vin && !v.vin_name?.toLowerCase().includes(vin)) return false;
+    if(sku && !v.sku_id?.toLowerCase().includes(sku)) return false;
 
     return true;
   });
 
   renderTable();
-
-  if (filteredVideos.length > 0) playVideo(0);
+  if(filteredVideos.length>0) playVideo(0);
 }
 
 /* TABLE */
-function renderTable() {
-  let html = `<tr><th>Video</th></tr>`;
-  filteredVideos.forEach((v,i) => {
-    html += `<tr onclick="playVideo(${i})"><td>${v["v.video_id"]}</td></tr>`;
+function renderTable(){
+  let html=`<tr><th>Video</th></tr>`;
+  filteredVideos.forEach((v,i)=>{
+    html+=`<tr onclick="playVideo(${i})"><td>${v["v.video_id"]}</td></tr>`;
   });
-  document.getElementById("videoTable").innerHTML = html;
+  document.getElementById("videoTable").innerHTML=html;
 }
 
 /* PLAYER */
-function playVideo(i) {
-  currentIndex = i;
-  const v = filteredVideos[i];
+function playVideo(i){
+  currentIndex=i;
+  const v=filteredVideos[i];
 
-  document.getElementById("player").src = v.video_url;
+  document.getElementById("player").src=v.video_url;
 
-  document.getElementById("meta").innerHTML = `
+  document.getElementById("meta").innerHTML=`
     <b>Video:</b> ${v["v.video_id"]}<br>
     <b>Enterprise:</b> ${v.enterprise_name}<br>
     <b>QC User:</b> ${v.qc_user_email_id}<br>
@@ -360,23 +381,22 @@ function playVideo(i) {
   `;
 }
 
-/* ACTION */
-function markQC(status) {
-  console.log("QC:", status);
+function markQC(status){
+  console.log(status);
 }
 
 /* UI */
-function togglePanel() {
+function togglePanel(){
   document.getElementById("sidePanel").classList.toggle("expanded");
 }
 
-function toggleTheme() {
+function toggleTheme(){
   document.body.classList.toggle("dark");
 }
 
-function logout() {
+function logout(){
   localStorage.removeItem("qc_reviewer");
-  window.location.href = "login.html";
+  window.location.href="login.html";
 }
 
 </script>
