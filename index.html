@@ -29,6 +29,7 @@ body {
 .header {
   display:flex;
   justify-content:space-between;
+  align-items:center;
   padding:12px 20px;
   background:rgba(0,0,0,0.6);
   backdrop-filter:blur(10px);
@@ -55,48 +56,45 @@ body {
   flex-direction:column;
 }
 
-/* FILTER */
+/* FILTERS */
 .filters {
   padding:12px;
+  overflow:hidden;
 }
 
 .filter-grid {
   display:grid;
-  gap:10px;
+  gap:12px;
 }
 
 .filter-grid input,
 .filter-grid select {
   width:100%;
-  padding:10px;
-  border-radius:8px;
+  height:42px;
+  padding:0 12px;
+  border-radius:10px;
   border:none;
-  background:rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.12);
   color:var(--text);
+  box-sizing:border-box;
 }
 
 .btn-row {
   display:flex;
-  gap:10px;
+  gap:12px;
 }
 
-.apply-btn {
-  flex:1;
-  background:#2563eb;
-  color:white;
-  padding:10px;
-  border:none;
-  border-radius:8px;
-}
-
+.apply-btn,
 .clear-btn {
   flex:1;
-  background:#dc2626;
-  color:white;
-  padding:10px;
+  height:42px;
+  border-radius:10px;
   border:none;
-  border-radius:8px;
+  color:white;
 }
+
+.apply-btn { background:#2563eb; }
+.clear-btn { background:#dc2626; }
 
 /* VIDEO LIST */
 .video-list {
@@ -133,18 +131,18 @@ video {
 /* PANEL */
 .panel {
   position:fixed;
-  right:15px;
-  top:70px;
+  bottom:20px;
+  right:20px;
 }
 
 .panel-btn {
-  padding:10px;
+  padding:12px;
   cursor:pointer;
 }
 
 .panel-content {
   display:none;
-  margin-top:5px;
+  margin-bottom:10px;
   padding:10px;
 }
 
@@ -154,11 +152,11 @@ video {
 
 .panel-content button {
   width:100%;
+  padding:10px;
   margin:5px 0;
-  padding:8px;
+  border-radius:10px;
+  background:rgba(255,255,255,0.15);
   border:none;
-  border-radius:8px;
-  background:rgba(255,255,255,0.2);
   color:var(--text);
 }
 
@@ -177,7 +175,6 @@ video {
   border-radius:6px;
   background:#ef4444;
   color:white;
-  cursor:pointer;
 }
 
 </style>
@@ -192,6 +189,7 @@ if (!reviewer) window.location.href="login.html";
 
 <div class="header">
   <div>🎥 QA Dashboard</div>
+  <div id="videoCount"></div>
   <div>Logged in: <b id="userName"></b></div>
 </div>
 
@@ -200,60 +198,60 @@ if (!reviewer) window.location.href="login.html";
 <!-- SIDEBAR -->
 <div class="sidebar">
 
-  <div class="filters glass">
-    <div class="filter-grid">
+<div class="filters glass">
+<div class="filter-grid">
 
-      <select id="enterpriseFilter"></select>
-      <select id="qcUserFilter"></select>
+<select id="enterpriseFilter"></select>
+<select id="qcUserFilter"></select>
 
-      <select id="statusFilter">
-        <option value="all">All Status</option>
-        <option value="verified">Verified</option>
-        <option value="rejected">Rejected</option>
-      </select>
+<select id="statusFilter">
+<option value="all">All Status</option>
+<option value="verified">Verified</option>
+<option value="rejected">Rejected</option>
+</select>
 
-      <input id="videoSearch" placeholder="Video ID">
-      <input id="vinFilter" placeholder="VIN">
-      <input id="skuFilter" placeholder="SKU">
+<input id="videoSearch" placeholder="Video ID">
+<input id="vinFilter" placeholder="VIN">
+<input id="skuFilter" placeholder="SKU">
 
-      <div class="btn-row">
-        <button class="apply-btn" onclick="applyFilter()">Apply</button>
-        <button class="clear-btn" onclick="clearFilters()">Clear</button>
-      </div>
+<div class="btn-row">
+<button class="apply-btn" onclick="applyFilter()">Apply</button>
+<button class="clear-btn" onclick="clearFilters()">Clear</button>
+</div>
 
-    </div>
-  </div>
+</div>
+</div>
 
-  <div class="video-list">
-    <table id="videoTable"></table>
-  </div>
+<div class="video-list">
+<table id="videoTable"></table>
+</div>
 
 </div>
 
 <!-- MAIN -->
 <div class="main">
 
-  <video id="player" controls></video>
+<video id="player" controls></video>
 
-  <div id="meta" class="meta glass"></div>
+<div id="meta" class="meta glass"></div>
 
-  <div>
-    <button onclick="markQC('Approved')" style="background:green;color:white;">Approve (A)</button>
-    <button onclick="markQC('Rejected')" style="background:red;color:white;">Reject (R)</button>
-  </div>
+<div>
+<button onclick="markQC('Approved')" style="background:green;color:white;">Approve (A)</button>
+<button onclick="markQC('Rejected')" style="background:red;color:white;">Reject (R)</button>
+</div>
 
-  <textarea id="comment" placeholder="Add comment..."></textarea>
+<textarea id="comment" placeholder="Add comment..."></textarea>
 
-  <div id="rejectBox" class="rejection-box glass">
-    <b>Quick Reasons:</b><br>
-    <button onclick="setReason('Voiceover Issue')">Voiceover</button>
-    <button onclick="setReason('Music Issue')">Music</button>
-    <button onclick="setReason('removeBG Issue')">removeBG</button>
-    <button onclick="setReason('Transition Issue')">Transition</button>
-    <button onclick="setReason('Data Issue')">Data</button>
-    <button onclick="setReason('Image Selection Issue')">Selection</button>
-    <button onclick="setReason('Repeated Images')">Repeated</button>
-  </div>
+<div id="rejectBox" class="rejection-box glass">
+<b>Quick Reasons:</b><br>
+<button onclick="setReason('Voiceover Issue')">Voiceover</button>
+<button onclick="setReason('Music Issue')">Music</button>
+<button onclick="setReason('removeBG Issue')">removeBG</button>
+<button onclick="setReason('Transition Issue')">Transition</button>
+<button onclick="setReason('Data Issue')">Data</button>
+<button onclick="setReason('Image Selection Issue')">Selection</button>
+<button onclick="setReason('Repeated Images')">Repeated</button>
+</div>
 
 </div>
 
@@ -261,154 +259,153 @@ if (!reviewer) window.location.href="login.html";
 
 <!-- PANEL -->
 <div id="panel" class="panel">
-  <div class="panel-btn glass" onclick="togglePanel()">☰</div>
-  <div class="panel-content glass">
-    <button onclick="toggleTheme()">Toggle Theme</button>
-    <button onclick="logout()">Logout</button>
-  </div>
+<div class="panel-content glass">
+<button onclick="toggleTheme()">Toggle Theme</button>
+<button onclick="logout()">Logout</button>
+</div>
+<div class="panel-btn glass" onclick="togglePanel()">☰</div>
 </div>
 
 <script>
 
-/* ================= CONFIG ================= */
+/* CONFIG */
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&single=true&output=csv";
 
-/* ================= STATE ================= */
 let videos = [];
 let filteredVideos = [];
 
-/* ================= LOAD DATA ================= */
+/* LOAD DATA */
 async function loadData() {
-  const res = await fetch(SHEET_URL);
-  const text = await res.text();
+const res = await fetch(SHEET_URL);
+const text = await res.text();
 
-  const rows = text.split("\n").map(r => r.split(","));
-  const headers = rows[0].map(h => h.trim());
+const rows = text.split("\n").map(r => r.split(","));
+const headers = rows[0].map(h => h.trim());
 
-  const index = {};
-  headers.forEach((h, i) => index[h] = i);
+const index = {};
+headers.forEach((h,i)=> index[h]=i);
 
-  videos = rows.slice(1).map(r => ({
-    video_id: r[index["v.video_id"]],
-    enterprise: r[index["enterprise_name"]],
-    qc_user: r[index["qc_user_email_id"]],
-    status: r[index["verified_status"]],
-    reason: r[index["rejected_reason"]],
-    vin: r[index["vin_name"]],
-    sku: r[index["sku_id"]],
-    url: r[index["video_url"]],
-    created: r[index["created_on"]],
-    updated: r[index["updated_on"]]
-  })).filter(v => v.video_id && v.url);
+videos = rows.slice(1).map(r => ({
+video_id: r[index["v.video_id"]],
+enterprise: r[index["enterprise_name"]],
+qc_user: r[index["qc_user_email_id"]],
+status: r[index["verified_status"]],
+reason: r[index["rejected_reason"]],
+vin: r[index["vin_name"]],
+sku: r[index["sku_id"]],
+url: r[index["video_url"]],
+created: r[index["created_on"]],
+updated: r[index["updated_on"]]
+})).filter(v=>v.video_id && v.url);
 
-  filteredVideos = [...videos];
+filteredVideos = [...videos];
 
-  populateFilters();
-  renderVideos();
+populateFilters();
+renderVideos();
+updateCount();
 }
 
-/* ================= FILTERS ================= */
-function populateFilters() {
-  const entSet = [...new Set(videos.map(v => v.enterprise))];
-  const userSet = [...new Set(videos.map(v => v.qc_user))];
+/* FILTERS */
+function populateFilters(){
+const ent=[...new Set(videos.map(v=>v.enterprise))];
+const users=[...new Set(videos.map(v=>v.qc_user))];
 
-  enterpriseFilter.innerHTML = `<option value="all">All Enterprises</option>` +
-    entSet.map(e => `<option>${e}</option>`).join("");
-
-  qcUserFilter.innerHTML = `<option value="all">All QC Users</option>` +
-    userSet.map(u => `<option>${u}</option>`).join("");
+enterpriseFilter.innerHTML = `<option value="all">All Enterprises</option>` + ent.map(e=>`<option>${e}</option>`).join("");
+qcUserFilter.innerHTML = `<option value="all">All QC Users</option>` + users.map(u=>`<option>${u}</option>`).join("");
 }
 
-function applyFilter() {
-  filteredVideos = videos.filter(v => {
-    return (
-      (enterpriseFilter.value === "all" || v.enterprise === enterpriseFilter.value) &&
-      (qcUserFilter.value === "all" || v.qc_user === qcUserFilter.value) &&
-      (statusFilter.value === "all" || v.status === statusFilter.value) &&
-      (!videoSearch.value || v.video_id.includes(videoSearch.value)) &&
-      (!vinFilter.value || v.vin.includes(vinFilter.value)) &&
-      (!skuFilter.value || v.sku.includes(skuFilter.value))
-    );
-  });
+function applyFilter(){
+filteredVideos = videos.filter(v =>
+(enterpriseFilter.value==="all" || v.enterprise===enterpriseFilter.value) &&
+(qcUserFilter.value==="all" || v.qc_user===qcUserFilter.value) &&
+(statusFilter.value==="all" || v.status===statusFilter.value) &&
+(!videoSearch.value || v.video_id.includes(videoSearch.value)) &&
+(!vinFilter.value || v.vin.includes(vinFilter.value)) &&
+(!skuFilter.value || v.sku.includes(skuFilter.value))
+);
 
-  renderVideos();
+renderVideos();
+updateCount();
 }
 
-function clearFilters() {
-  enterpriseFilter.value = "all";
-  qcUserFilter.value = "all";
-  statusFilter.value = "all";
-  videoSearch.value = "";
-  vinFilter.value = "";
-  skuFilter.value = "";
+function clearFilters(){
+enterpriseFilter.value="all";
+qcUserFilter.value="all";
+statusFilter.value="all";
+videoSearch.value="";
+vinFilter.value="";
+skuFilter.value="";
 
-  filteredVideos = [...videos];
-  renderVideos();
+filteredVideos=[...videos];
+renderVideos();
+updateCount();
 }
 
-/* ================= RENDER ================= */
-function renderVideos() {
-  videoTable.innerHTML = "";
+/* RENDER */
+function renderVideos(){
+videoTable.innerHTML="";
 
-  filteredVideos.forEach((v, i) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `<td>${v.video_id}</td>`;
-    row.onclick = () => loadVideo(i);
-    videoTable.appendChild(row);
-  });
-
-  if (filteredVideos.length) loadVideo(0);
-}
-
-/* ================= PLAYER ================= */
-function loadVideo(i) {
-  const v = filteredVideos[i];
-
-  player.src = v.url;
-
-  meta.innerHTML = `
-    <b>Video:</b> ${v.video_id}<br>
-    <b>Enterprise:</b> ${v.enterprise}<br>
-    <b>QC User:</b> ${v.qc_user}<br>
-    <b>Status:</b> ${v.status}<br>
-    ${v.status === "rejected" ? `<b>Reason:</b> ${v.reason}<br>` : ""}
-    <b>Created:</b> ${v.created}<br>
-    <b>Updated:</b> ${v.updated}
-  `;
-}
-
-/* ================= PANEL ================= */
-function togglePanel() {
-  panel.classList.toggle("open");
-}
-
-/* ================= THEME ================= */
-function toggleTheme() {
-  document.body.classList.toggle("light");
-  localStorage.setItem("theme", document.body.classList.contains("light") ? "light" : "dark");
-}
-
-if (localStorage.getItem("theme") === "light") {
-  document.body.classList.add("light");
-}
-
-/* ================= REJECT ================= */
-function markQC(type) {
-  rejectBox.style.display = (type === "Rejected") ? "block" : "none";
-}
-
-function setReason(r) {
-  comment.value = r;
-}
-
-/* ================= SHORTCUT ================= */
-document.addEventListener("keydown", e => {
-  if (e.key.toLowerCase() === "r") markQC("Rejected");
+filteredVideos.forEach((v,i)=>{
+const row=document.createElement("tr");
+row.innerHTML=`<td>${v.video_id}</td>`;
+row.onclick=()=>loadVideo(i);
+videoTable.appendChild(row);
 });
 
-/* ================= INIT ================= */
-document.getElementById("userName").innerText = reviewer;
-window.onload = loadData;
+if(filteredVideos.length) loadVideo(0);
+}
+
+/* PLAYER */
+function loadVideo(i){
+const v=filteredVideos[i];
+player.src=v.url;
+
+meta.innerHTML=`
+<b>Video:</b> ${v.video_id}<br>
+<b>Enterprise:</b> ${v.enterprise}<br>
+<b>QC User:</b> ${v.qc_user}<br>
+<b>Status:</b> ${v.status}<br>
+${v.status==="rejected" ? `<b>Reason:</b> ${v.reason}<br>`:""}
+<b>Created:</b> ${v.created}<br>
+<b>Updated:</b> ${v.updated}
+`;
+}
+
+/* COUNT */
+function updateCount(){
+videoCount.innerText=`Total: ${videos.length} | Filtered: ${filteredVideos.length}`;
+}
+
+/* PANEL */
+function togglePanel(){ panel.classList.toggle("open"); }
+
+/* THEME */
+function toggleTheme(){
+document.body.classList.toggle("light");
+localStorage.setItem("theme",document.body.classList.contains("light")?"light":"dark");
+}
+if(localStorage.getItem("theme")==="light") document.body.classList.add("light");
+
+/* REJECT */
+function markQC(type){
+rejectBox.style.display = (type==="Rejected") ? "block":"none";
+}
+function setReason(r){ comment.value=r; }
+
+/* SHORTCUT */
+document.addEventListener("keydown",e=>{
+if(e.key.toLowerCase()==="r") markQC("Rejected");
+});
+
+/* LOGOUT */
+function logout(){
+localStorage.removeItem("qc_reviewer");
+location.href="login.html";
+}
+
+/* INIT */
+userName.innerText=reviewer;
+window.onload=loadData;
 
 </script>
 
