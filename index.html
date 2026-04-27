@@ -80,6 +80,7 @@
     video {
       width: 75%;
       border-radius: 12px;
+      margin-top: 10px;
     }
 
     .meta {
@@ -88,6 +89,10 @@
       padding: 12px;
       border-radius: 10px;
       background: white;
+    }
+
+    body.dark .meta {
+      background: #1e293b;
     }
 
     textarea {
@@ -99,14 +104,23 @@
     .buttons button {
       margin: 5px;
       padding: 10px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
     }
 
+    .approve { background: green; color: white; }
+    .reject { background: red; color: white; }
+
+    /* SIDE PANEL */
     .side-panel {
       position: fixed;
       top: 80px;
       right: 0;
-      width: 60px;
+      width: 50px;
       background: #fff;
+      border-radius: 10px 0 0 10px;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.1);
       transition: 0.3s;
     }
 
@@ -115,16 +129,27 @@
     }
 
     .menu-btn {
-      padding: 15px;
+      padding: 12px;
       cursor: pointer;
+      text-align: center;
+      font-size: 20px;
     }
 
     .panel-content {
       display: none;
+      flex-direction: column;
+      padding: 10px;
     }
 
     .side-panel.expanded .panel-content {
-      display: block;
+      display: flex;
+    }
+
+    .panel-content button {
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 6px;
+      cursor: pointer;
     }
 
   </style>
@@ -148,9 +173,12 @@ if (!reviewer) window.location.href = "login.html";
   <div class="sidebar">
     <div class="filter">
 
-      <select id="enterpriseFilter" onchange="applyFilter()">
-        <option value="all">All Enterprises</option>
+      <select id="enterpriseIdFilter" onchange="applyFilter()">
+        <option value="all">All Enterprise IDs</option>
       </select>
+
+      <input type="text" id="enterpriseNameFilter" placeholder="Search Enterprise Name"
+        oninput="applyFilter()">
 
       <select id="qcUserFilter" onchange="applyFilter()">
         <option value="all">All QC Users</option>
@@ -185,11 +213,11 @@ if (!reviewer) window.location.href = "login.html";
     <div id="meta" class="meta"></div>
 
     <div class="buttons">
-      <button onclick="markQC('Approved')">Approve (A)</button>
-      <button onclick="markQC('Rejected')">Reject (R)</button>
+      <button class="approve" onclick="markQC('Approved')">Approve (A)</button>
+      <button class="reject" onclick="markQC('Rejected')">Reject (R)</button>
     </div>
 
-    <textarea id="comment"></textarea>
+    <textarea id="comment" placeholder="Add comment..."></textarea>
   </div>
 
 </div>
@@ -198,8 +226,8 @@ if (!reviewer) window.location.href = "login.html";
 <div id="sidePanel" class="side-panel">
   <div class="menu-btn" onclick="togglePanel()">☰</div>
   <div class="panel-content">
-    <button onclick="toggleTheme()">Theme</button>
-    <button onclick="logout()">Logout</button>
+    <button onclick="toggleTheme()">🌗 Theme</button>
+    <button onclick="logout()">🚪 Logout</button>
   </div>
 </div>
 
@@ -231,16 +259,19 @@ fetch(SHEET_URL)
 });
 
 function populateFilters() {
-  const eSet = new Set();
-  const uSet = new Set();
+  const enterpriseSet = new Set();
+  const qcUserSet = new Set();
 
   videos.forEach(v => {
-    eSet.add(v["v.enterprise_id"]);
-    uSet.add(v.qc_user_email_id);
+    if (v["v.enterprise_id"]) enterpriseSet.add(v["v.enterprise_id"]);
+
+    if (v.qc_user_email_id && v.qc_user_email_id.includes("@")) {
+      qcUserSet.add(v.qc_user_email_id);
+    }
   });
 
-  eSet.forEach(v => addOption("enterpriseFilter", v));
-  uSet.forEach(v => addOption("qcUserFilter", v));
+  enterpriseSet.forEach(v => addOption("enterpriseIdFilter", v));
+  qcUserSet.forEach(v => addOption("qcUserFilter", v));
 }
 
 function addOption(id, val) {
@@ -251,21 +282,48 @@ function addOption(id, val) {
 }
 
 function applyFilter() {
-  const enterprise = document.getElementById("enterpriseFilter").value;
+
+  const enterpriseId = document.getElementById("enterpriseIdFilter").value;
+  const enterpriseName = document.getElementById("enterpriseNameFilter").value.toLowerCase();
   const qcUser = document.getElementById("qcUserFilter").value;
   const status = document.getElementById("statusFilter").value;
 
   const videoSearch = document.getElementById("videoSearch").value.toLowerCase();
+  const vin = document.getElementById("vinFilter").value.toLowerCase();
+  const sku = document.getElementById("skuFilter").value.toLowerCase();
+
+  const createdFrom = document.getElementById("createdFrom").value;
+  const createdTo = document.getElementById("createdTo").value;
+
+  const updatedFrom = document.getElementById("updatedFrom").value;
+  const updatedTo = document.getElementById("updatedTo").value;
 
   filteredVideos = videos.filter(v => {
-    if (enterprise !== "all" && v["v.enterprise_id"] !== enterprise) return false;
+
+    if (enterpriseId !== "all" && v["v.enterprise_id"] !== enterpriseId) return false;
+    if (enterpriseName && !v.enterprise_name.toLowerCase().includes(enterpriseName)) return false;
     if (qcUser !== "all" && v.qc_user_email_id !== qcUser) return false;
     if (status !== "all" && v.verified_status !== status) return false;
+
     if (videoSearch && !v["v.video_id"].toLowerCase().includes(videoSearch)) return false;
+    if (vin && !v.vin_name.toLowerCase().includes(vin)) return false;
+    if (sku && !v.sku_id.toLowerCase().includes(sku)) return false;
+
+    const created = new Date(v.created_on.replace(",", ""));
+    const updated = new Date(v.updated_on.replace(",", ""));
+
+    if (createdFrom && created < new Date(createdFrom)) return false;
+    if (createdTo && created > new Date(createdTo)) return false;
+
+    if (updatedFrom && updated < new Date(updatedFrom)) return false;
+    if (updatedTo && updated > new Date(updatedTo)) return false;
+
     return true;
   });
 
   renderTable();
+
+  if (filteredVideos.length > 0) playVideo(0);
 }
 
 function renderTable() {
@@ -279,8 +337,17 @@ function renderTable() {
 function playVideo(i) {
   currentIndex = i;
   const v = filteredVideos[i];
+
   document.getElementById("player").src = v.video_url;
-  document.getElementById("meta").innerHTML = v["v.video_id"];
+
+  document.getElementById("meta").innerHTML = `
+    <b>Video:</b> ${v["v.video_id"]}<br>
+    <b>Enterprise:</b> ${v.enterprise_name}<br>
+    <b>QC User:</b> ${v.qc_user_email_id}<br>
+    <b>Status:</b> ${v.verified_status}<br>
+    <b>Created:</b> ${v.created_on}<br>
+    <b>Updated:</b> ${v.updated_on}
+  `;
 }
 
 function markQC(status) {
