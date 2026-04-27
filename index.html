@@ -64,8 +64,7 @@ body {
 }
 
 .filter-grid {
-  display:flex;
-  flex-direction:column;
+  display:grid;
   gap:12px;
 }
 
@@ -76,22 +75,22 @@ body {
   padding:0 12px;
   border-radius:10px;
   border:none;
+  outline:none;
   background:rgba(255,255,255,0.12);
   color:var(--text);
+  font-size:14px;
+  box-sizing:border-box;
 }
 
 .btn-row {
   display:flex;
-  gap:10px;
+  gap:12px;
 }
 
 .apply-btn,
 .clear-btn {
-  flex:1;
   height:42px;
   border-radius:10px;
-  border:none;
-  color:white;
 }
 
 .apply-btn { background:#2563eb; }
