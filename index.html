@@ -307,11 +307,23 @@ updateCount();
 
 /* FILTERS */
 function populateFilters(){
-const ent=[...new Set(videos.map(v=>v.enterprise))];
-const users=[...new Set(videos.map(v=>v.qc_user))];
 
-enterpriseFilter.innerHTML = `<option value="all">All Enterprises</option>` + ent.map(e=>`<option>${e}</option>`).join("");
-qcUserFilter.innerHTML = `<option value="all">All QC Users</option>` + users.map(u=>`<option>${u}</option>`).join("");
+  const ent = [...new Set(videos.map(v => v.enterprise))];
+
+  // ✅ FILTER ONLY EMAILS
+  const users = [...new Set(
+    videos
+      .map(v => v.qc_user)
+      .filter(u => u && u.includes("@")) // <-- KEY FIX
+  )];
+
+  enterpriseFilter.innerHTML =
+    `<option value="all">All Enterprises</option>` +
+    ent.map(e => `<option>${e}</option>`).join("");
+
+  qcUserFilter.innerHTML =
+    `<option value="all">All QC Users</option>` +
+    users.map(u => `<option>${u}</option>`).join("");
 }
 
 function applyFilter(){
