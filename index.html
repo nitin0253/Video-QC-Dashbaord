@@ -1,81 +1,106 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Video QC Dashboard</title>
+  <title>QA Dashboard</title>
 
   <style>
-    body { font-family: Arial; margin: 0; background: #f4f6f8; }
+    * { box-sizing: border-box; }
 
-    h1 {
-      text-align: center;
-      padding: 15px;
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Arial;
+      background: #f4f6f8;
+      color: #111;
+      transition: 0.3s;
+    }
+
+    body.dark {
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
       background: #111;
       color: white;
-      margin: 0;
     }
 
-    .topbar {
-      text-align: center;
-      padding: 5px;
+    body.dark .header {
+      background: #020617;
+    }
+
+    .title {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .user {
       font-size: 14px;
     }
 
-    .container { display: flex; height: calc(100vh - 90px); }
-
-    .table-section {
-      width: 30%;
-      background: white;
-      border-right: 1px solid #ddd;
-      overflow-y: auto;
+    .logout {
+      color: red;
+      cursor: pointer;
+      margin-left: 10px;
     }
 
-    .video-section {
-      width: 70%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-
-    video {
-      width: 80%;
-      max-height: 60vh;
-      border-radius: 12px;
-      background: black;
-    }
-
-    .meta {
-      margin-top: 10px;
-      width: 80%;
-      background: white;
+    /* THEME BUTTON */
+    .theme-toggle {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: #fff;
+      border-radius: 50%;
       padding: 10px;
-      border-radius: 10px;
-      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
 
-    textarea {
-      width: 80%;
-      height: 80px;
-      margin-top: 10px;
+    body.dark .theme-toggle {
+      background: #1e293b;
+      color: white;
+    }
+
+    /* LAYOUT */
+    .container {
+      display: flex;
+      height: calc(100vh - 60px);
+    }
+
+    /* LEFT PANEL */
+    .sidebar {
+      width: 28%;
+      background: white;
+      overflow-y: auto;
+      border-right: 1px solid #ddd;
+    }
+
+    body.dark .sidebar {
+      background: #1e293b;
+    }
+
+    .filter {
+      padding: 10px;
+    }
+
+    select {
+      width: 100%;
       padding: 8px;
       border-radius: 6px;
     }
 
-    .buttons button {
-      padding: 10px 15px;
-      margin: 5px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
+    .stats {
+      font-size: 12px;
+      margin-top: 5px;
     }
-
-    .approve { background: green; color: white; }
-    .reject { background: red; color: white; }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
     }
 
     th {
@@ -92,37 +117,110 @@
       cursor: pointer;
     }
 
-    tr:hover { background: #f1f1f1; }
+    tr:hover {
+      background: #f1f5f9;
+    }
 
-    .active { background: #d0ebff !important; }
+    body.dark tr:hover {
+      background: #334155;
+    }
+
+    .active {
+      background: #dbeafe !important;
+    }
+
+    body.dark .active {
+      background: #475569 !important;
+    }
+
+    /* RIGHT PANEL */
+    .main {
+      width: 72%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    video {
+      width: 75%;
+      border-radius: 12px;
+      background: black;
+    }
+
+    .meta {
+      width: 75%;
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 10px;
+      background: white;
+    }
+
+    body.dark .meta {
+      background: #1e293b;
+    }
+
+    textarea {
+      width: 75%;
+      height: 80px;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    body.dark textarea {
+      background: #334155;
+      color: white;
+    }
+
+    .buttons {
+      margin-top: 10px;
+    }
+
+    button {
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    .approve { background: green; color: white; }
+    .reject { background: red; color: white; }
+
   </style>
 </head>
 
 <body>
+
+<div class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</div>
 
 <script>
 const reviewer = localStorage.getItem("qc_reviewer");
 if (!reviewer) window.location.href = "login.html";
 </script>
 
-<h1>🎥 Video QC Dashboard</h1>
-
-<div class="topbar">
-  Logged in as: <b id="userName"></b> |
-  <span style="color:red; cursor:pointer;" onclick="logout()">Logout</span>
+<div class="header">
+  <div class="title">🎥 QA Dashboard</div>
+  <div class="user">
+    Logged in: <b id="userName"></b>
+    <span class="logout" onclick="logout()">Logout</span>
+  </div>
 </div>
 
 <div class="container">
 
-  <div class="table-section">
+  <!-- LEFT -->
+  <div class="sidebar">
 
-    <div style="padding:10px;">
-      <select id="enterpriseFilter" onchange="applyFilter()" style="width:100%; padding:8px;">
+    <div class="filter">
+      <select id="enterpriseFilter" onchange="applyFilter()">
         <option value="all">All Enterprises</option>
       </select>
 
-      <div style="font-size:12px; margin-top:5px;">
-        Pending: <b id="pendingCount"></b> | Total: <b id="totalCount"></b>
+      <div class="stats">
+        Pending: <b id="pendingCount"></b> |
+        Total: <b id="totalCount"></b>
       </div>
     </div>
 
@@ -130,7 +228,8 @@ if (!reviewer) window.location.href = "login.html";
 
   </div>
 
-  <div class="video-section">
+  <!-- RIGHT -->
+  <div class="main">
 
     <video id="player" controls></video>
 
@@ -150,7 +249,7 @@ if (!reviewer) window.location.href = "login.html";
 <script>
 
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?output=csv";
-// const API_URL = "PASTE_YOUR_APPS_SCRIPT_URL_HERE";
+const API_URL = "PASTE_YOUR_SCRIPT_URL";
 
 let videos = [];
 let filteredVideos = [];
@@ -163,26 +262,10 @@ function logout() {
   window.location.href = "login.html";
 }
 
-function parseCSV(text) {
-  const rows = [];
-  let row = [], value = '', insideQuotes = false;
-
-  for (let char of text) {
-    if (char === '"') insideQuotes = !insideQuotes;
-    else if (char === ',' && !insideQuotes) { row.push(value); value = ''; }
-    else if (char === '\n' && !insideQuotes) { row.push(value); rows.push(row); row = []; value = ''; }
-    else value += char;
-  }
-
-  row.push(value);
-  rows.push(row);
-  return rows;
-}
-
 fetch(SHEET_URL)
 .then(res => res.text())
 .then(csv => {
-  const rows = parseCSV(csv);
+  const rows = csv.split("\n").map(r => r.split(","));
   const headers = rows[0];
 
   videos = rows.slice(1).map(r => {
@@ -212,13 +295,12 @@ function applyFilter() {
 
   filteredVideos = videos.filter(v => {
     if (v.status !== "done") return false;
-    if (v.qc_status && v.qc_status.trim() !== "") return false;
     if (selected === "all") return true;
     return v.enterprise_id === selected;
   });
 
-  updateStats();
   renderTable();
+  updateStats();
 
   if (filteredVideos.length > 0) playVideo(0);
 }
@@ -240,12 +322,6 @@ function renderTable() {
   document.getElementById("videoTable").innerHTML = html;
 }
 
-function highlightRow(index) {
-  document.querySelectorAll("tr").forEach(r => r.classList.remove("active"));
-  const row = document.getElementById("row-" + index);
-  if (row) row.classList.add("active");
-}
-
 function playVideo(index) {
   currentIndex = index;
   const v = filteredVideos[index];
@@ -253,25 +329,21 @@ function playVideo(index) {
   document.getElementById("player").src = v.video_url;
 
   document.getElementById("meta").innerHTML = `
-    <b>Video ID:</b> ${v.video_id}<br>
+    <b>Video:</b> ${v.video_id}<br>
     <b>Enterprise:</b> ${v.enterprise_id}<br>
     <b>Created:</b> ${v.created_on}<br>
     <b>Updated:</b> ${v.updated_on}
   `;
-
-  highlightRow(index);
 }
 
 function markQC(status) {
   const v = filteredVideos[currentIndex];
-  const comment = document.getElementById("comment").value;
 
   fetch(API_URL, {
     method: "POST",
     body: JSON.stringify({
       video_id: v.video_id,
       qc_status: status,
-      qc_comment: comment,
       qc_done_by: reviewer
     })
   })
@@ -282,23 +354,30 @@ function markQC(status) {
 
     if (filteredVideos.length > 0) {
       playVideo(currentIndex % filteredVideos.length);
-    } else {
-      document.getElementById("player").src = "";
-      document.getElementById("meta").innerHTML = "🎉 All videos reviewed";
     }
   });
 }
 
-/* ⌨️ Keyboard shortcuts */
+/* 🔥 Keyboard shortcuts */
 document.addEventListener("keydown", (e) => {
-  if (!filteredVideos.length) return;
-
-  if (e.key === "a" || e.key === "A") markQC("Approved");
-  if (e.key === "r" || e.key === "R") markQC("Rejected");
-
-  if (e.key === "ArrowRight") playVideo((currentIndex + 1) % filteredVideos.length);
-  if (e.key === "ArrowLeft") playVideo((currentIndex - 1 + filteredVideos.length) % filteredVideos.length);
+  if (e.key === "a") markQC("Approved");
+  if (e.key === "r") markQC("Rejected");
 });
+
+/* 🌗 Theme */
+function toggleTheme() {
+  document.body.classList.toggle("dark");
+  const isDark = document.body.classList.contains("dark");
+  localStorage.setItem("theme", isDark ? "dark" : "light");
+  document.getElementById("themeBtn").innerText = isDark ? "☀️" : "🌙";
+}
+
+(function () {
+  if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark");
+    document.getElementById("themeBtn").innerText = "☀️";
+  }
+})();
 
 </script>
 
