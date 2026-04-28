@@ -727,7 +727,7 @@ async function loadData() {
   try {
     const res = await fetch(SHEET_URL);
     const text = await res.text();
-    const rows = parseCSV(text);
+    console.log("API RESPONSE:", text);
 
     videos = rows
       .map(r => ({
