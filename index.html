@@ -663,6 +663,8 @@ let localReviews = {}; // { video_id: { action, comment, timestamp } }
 
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&single=true&output=csv";
 
+const API_URL = "https://script.google.com/macros/s/AKfycbzJZ7Kysm0_edPbr2mmoXfX02qUigbJ6dbVZOuh-qApAoJ9OaMDxZx1EeeFCS-ktIiz/exec";
+  
 // ─── LOGIN ────────────────────────────────────────────────
 function init() {
   const saved = localStorage.getItem('qa_reviewer');
@@ -1011,8 +1013,9 @@ function toggleReason(btn, reason) {
   }
 }
 
-function submitReview() {
+async function submitReview() {
   if (!currentAction) return;
+
   const v = filtered[currentIdx];
   const comment = document.getElementById('comment').value.trim();
 
@@ -1022,33 +1025,62 @@ function submitReview() {
     return;
   }
 
-  // Save locally
-  localReviews[v.video_id] = {
+  const payload = {
+    video_id: v.video_id,
     action: currentAction,
-    comment,
-    reviewer: reviewer.email,
-    timestamp: new Date().toISOString()
+    comment: comment,
+    reviewer: reviewer.email
   };
-  localStorage.setItem('qa_local_reviews', JSON.stringify(localReviews));
 
-  // Update list item badge
-  const el = document.getElementById(`vi-${currentIdx}`);
-  if (el) {
-    const badge = el.querySelector('.vid-badge');
-    const b = getBadge(currentAction);
-    badge.className = `vid-badge ${b.cls}`;
-    badge.textContent = b.label;
+  try {
+    showToast('Saving to sheet...', 'info');
+
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+
+    const result = await res.json();
+
+    if (!result.success) {
+      throw new Error(result.error || "Unknown error");
+    }
+
+    // ✅ Keep local backup (optional but useful)
+    localReviews[v.video_id] = {
+      action: currentAction,
+      comment,
+      reviewer: reviewer.email,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('qa_local_reviews', JSON.stringify(localReviews));
+
+    // ✅ Update UI
+    const el = document.getElementById(`vi-${currentIdx}`);
+    if (el) {
+      const badge = el.querySelector('.vid-badge');
+      const b = getBadge(currentAction);
+      badge.className = `vid-badge ${b.cls}`;
+      badge.textContent = b.label;
+    }
+
+    renderMeta(v);
+    updateStats();
+
+    showToast(`${currentAction} — saved to sheet`, 'success');
+
+    // Auto next
+    setTimeout(() => {
+      if (currentIdx < filtered.length - 1) goNext();
+    }, 500);
+
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to save to sheet', 'error');
   }
-
-  renderMeta(v);
-  updateStats();
-
-  showToast(`${currentAction} — saved locally`, 'success');
-
-  // Auto advance
-  setTimeout(() => {
-    if (currentIdx < filtered.length - 1) goNext();
-  }, 600);
 }
 
 // ─── STATS ───────────────────────────────────────────────
