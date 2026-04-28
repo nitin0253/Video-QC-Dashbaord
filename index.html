@@ -4,668 +4,50 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QA Review Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg: #0a0e1a;
-  --surface: #111827;
-  --surface2: #1a2236;
-  --surface3: #1f2d45;
-  --border: rgba(99,139,255,0.12);
-  --border2: rgba(99,139,255,0.22);
-  --accent: #4f7cff;
-  --accent2: #7b9fff;
-  --text: #e8edf5;
-  --text2: #8b9ab5;
-  --text3: #4d5c75;
-  --green: #22c55e;
-  --red: #ef4444;
-  --yellow: #f59e0b;
-  --mono: 'JetBrains Mono', monospace;
-  --sans: 'DM Sans', sans-serif;
-}
-body.light {
-  --bg: #f0f4ff;
-  --surface: #ffffff;
-  --surface2: #f5f7ff;
-  --surface3: #ebeffe;
-  --border: rgba(79,124,255,0.15);
-  --border2: rgba(79,124,255,0.3);
-  --text: #0f172a;
-  --text2: #4b5563;
-  --text3: #9ca3af;
-}
-* { margin:0; padding:0; box-sizing:border-box; }
-
-body {
-  font-family: var(--sans);
-  background: var(--bg);
-  color: var(--text);
-  height: 100vh;
-  overflow: hidden;
-  transition: background 0.3s, color 0.3s;
-}
-
-/* ── LOGIN ── */
-#loginScreen {
-  position: fixed; inset: 0;
-  background: var(--bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  flex-direction: column;
-  gap: 8px;
-}
-.login-box {
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  border-radius: 16px;
-  padding: 40px 48px;
-  width: 380px;
-  box-shadow: 0 40px 80px rgba(0,0,0,0.4);
-}
-.login-box h2 {
-  font-size: 22px;
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: var(--text);
-}
-.login-box p { color: var(--text2); font-size: 13px; margin-bottom: 28px; }
-.login-box input {
-  width: 100%;
-  padding: 12px 16px;
-  border-radius: 10px;
-  border: 1px solid var(--border2);
-  background: var(--surface2);
-  color: var(--text);
-  font-size: 14px;
-  font-family: var(--sans);
-  margin-bottom: 12px;
-  outline: none;
-  transition: border 0.2s;
-}
-.login-box input:focus { border-color: var(--accent); }
-.login-box button {
-  width: 100%;
-  padding: 13px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-.login-box button:hover { opacity: 0.85; }
-.login-logo { font-family: var(--mono); font-size: 13px; color: var(--text3); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 32px; }
-
-/* ── HEADER ── */
-.header {
-  height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.header-left { display: flex; align-items: center; gap: 16px; }
-.brand { font-family: var(--mono); font-size: 13px; color: var(--accent2); letter-spacing: 2px; font-weight: 600; }
-.stats-row { display: flex; gap: 10px; }
-.stat-pill {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  font-family: var(--mono);
-}
-.stat-total  { background: rgba(79,124,255,0.12); color: var(--accent2); }
-.stat-ok     { background: rgba(34,197,94,0.12); color: var(--green); }
-.stat-reject { background: rgba(239,68,68,0.12); color: var(--red); }
-.stat-pending{ background: rgba(245,158,11,0.12); color: var(--yellow); }
-
-.header-right { display: flex; align-items: center; gap: 12px; }
-.reviewer-badge {
-  font-size: 12px;
-  color: var(--text2);
-  background: var(--surface2);
-  padding: 5px 12px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-}
-.icon-btn {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text2);
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px;
-  transition: all 0.2s;
-}
-.icon-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-/* ── LAYOUT ── */
-.app { display: flex; height: calc(100vh - 52px); }
-
-/* ── SIDEBAR ── */
-.sidebar {
-  width: 300px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--border);
-  background: var(--surface);
-}
-
-/* ── FILTERS ── */
-.filter-panel {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.filter-panel input,
-.filter-panel select {
-  width: 100%;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text);
-  font-size: 12px;
-  font-family: var(--sans);
-  outline: none;
-  transition: border 0.2s;
-}
-.filter-panel input:focus,
-.filter-panel select:focus { border-color: var(--accent); }
-.filter-panel select option { background: var(--surface2); }
-.filter-row { display: flex; gap: 8px; }
-.filter-row input { flex: 1; }
-.btn-apply {
-  flex: 1; padding: 8px;
-  background: var(--accent);
-  color: white;
-  border: none; border-radius: 8px;
-  font-size: 12px; font-weight: 600; cursor: pointer;
-  transition: opacity 0.2s;
-}
-.btn-apply:hover { opacity: 0.85; }
-.btn-clear {
-  flex: 1; padding: 8px;
-  background: var(--surface3);
-  color: var(--text2);
-  border: 1px solid var(--border); border-radius: 8px;
-  font-size: 12px; font-weight: 500; cursor: pointer;
-}
-
-/* ── DATE FILTER ── */
-.date-tabs { display: flex; gap: 4px; }
-.date-tab {
-  flex: 1; padding: 6px 4px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text2);
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.2s;
-}
-.date-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
-
-/* ── VIDEO LIST ── */
-.video-list { flex: 1; overflow-y: auto; }
-.video-list::-webkit-scrollbar { width: 4px; }
-.video-list::-webkit-scrollbar-track { background: transparent; }
-.video-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
-
-.list-empty { padding: 40px 20px; text-align: center; color: var(--text3); font-size: 13px; }
-
-.video-item {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  transition: background 0.15s;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 4px 8px;
-  align-items: center;
-}
-.video-item:hover { background: var(--surface2); }
-.video-item.active { background: var(--surface3); border-left: 2px solid var(--accent); }
-.video-item.active .vid-id { color: var(--accent2); }
-
-.vid-id { font-family: var(--mono); font-size: 11px; color: var(--text2); }
-.vid-enterprise { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.vid-date { font-size: 10px; color: var(--text3); }
-.vid-badge {
-  font-family: var(--mono);
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.badge-verified { background: rgba(34,197,94,0.12); color: var(--green); }
-.badge-rejected { background: rgba(239,68,68,0.12); color: var(--red); }
-.badge-done     { background: rgba(245,158,11,0.12); color: var(--yellow); }
-.badge-pending  { background: rgba(79,124,255,0.1); color: var(--accent2); }
-
-/* ── MAIN ── */
-.main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg);
-}
-
-/* ── VIDEO + META ROW ── */
-.content-row {
-  flex: 1;
-  display: flex;
-  gap: 0;
-  overflow: hidden;
-}
-
-/* ── VIDEO PANE ── */
-.video-pane {
-  flex: 1.4;
-  display: flex;
-  flex-direction: column;
-  padding: 16px;
-  gap: 10px;
-  border-right: 1px solid var(--border);
-  overflow: hidden;
-}
-.video-wrapper {
-  flex: 1;
-  background: #000;
-  border-radius: 12px;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  min-height: 0;
-}
-.video-placeholder {
-  color: var(--text3);
-  font-size: 13px;
-  text-align: center;
-}
-.video-placeholder .icon { font-size: 32px; margin-bottom: 8px; display: block; }
-video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  border-radius: 12px;
-}
-
-/* nav arrows */
-.vid-nav { display: flex; align-items: center; justify-content: space-between; }
-.nav-btn {
-  padding: 7px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text2);
-  font-size: 12px;
-  cursor: pointer;
-  display: flex; align-items: center; gap: 6px;
-  transition: all 0.2s;
-}
-.nav-btn:hover { border-color: var(--accent); color: var(--accent); }
-.vid-counter { font-family: var(--mono); font-size: 12px; color: var(--text3); }
-
-/* ── META PANE ── */
-.meta-pane {
-  width: 300px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  padding: 16px;
-  gap: 12px;
-}
-.meta-pane::-webkit-scrollbar { width: 4px; }
-.meta-pane::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
-
-.meta-section { display: flex; flex-direction: column; gap: 8px; }
-.meta-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px; }
-
-.meta-row { display: flex; flex-direction: column; gap: 2px; }
-.meta-key { font-size: 10px; color: var(--text3); }
-.meta-val { font-size: 12px; color: var(--text); word-break: break-all; }
-.meta-val.mono { font-family: var(--mono); font-size: 11px; }
-
-.divider { height: 1px; background: var(--border); }
-
-/* current QC status display */
-.current-status-box {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-}
-.current-status-box .label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-.status-display { display: flex; align-items: center; gap: 8px; }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.status-text { font-size: 13px; font-weight: 600; }
-
-/* ── ACTION BAR ── */
-.action-bar {
-  padding: 12px 16px;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.action-btns { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
-
-.btn-approve {
-  padding: 10px 24px;
-  background: rgba(34,197,94,0.12);
-  color: var(--green);
-  border: 1px solid rgba(34,197,94,0.3);
-  border-radius: 10px;
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  display: flex; align-items: center; gap: 6px;
-  transition: all 0.2s;
-}
-.btn-approve:hover { background: rgba(34,197,94,0.2); }
-.btn-approve.selected { background: var(--green); color: white; }
-
-.btn-reject {
-  padding: 10px 24px;
-  background: rgba(239,68,68,0.1);
-  color: var(--red);
-  border: 1px solid rgba(239,68,68,0.25);
-  border-radius: 10px;
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  display: flex; align-items: center; gap: 6px;
-  transition: all 0.2s;
-}
-.btn-reject:hover { background: rgba(239,68,68,0.18); }
-.btn-reject.selected { background: var(--red); color: white; }
-
-.btn-submit {
-  padding: 10px 24px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  margin-left: auto;
-  transition: opacity 0.2s;
-  display: flex; align-items: center; gap: 6px;
-}
-.btn-submit:hover { opacity: 0.85; }
-.btn-submit:disabled { opacity: 0.3; cursor: not-allowed; }
-
-.kbd {
-  font-family: var(--mono);
-  font-size: 10px;
-  padding: 2px 5px;
-  border: 1px solid currentColor;
-  border-radius: 4px;
-  opacity: 0.6;
-}
-
-/* comment + reasons row */
-.comment-row { display: flex; gap: 10px; align-items: flex-start; }
-
-.comment-area {
-  flex: 1;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text);
-  font-size: 13px;
-  font-family: var(--sans);
-  resize: none;
-  height: 70px;
-  outline: none;
-  transition: border 0.2s;
-}
-.comment-area:focus { border-color: var(--accent); }
-
-.quick-reasons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  max-width: 280px;
-}
-.reason-btn {
-  padding: 5px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(239,68,68,0.2);
-  background: rgba(239,68,68,0.06);
-  color: #f87171;
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.reason-btn:hover { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); }
-.reason-btn.active { background: var(--red); color: white; border-color: var(--red); }
-
-/* ── TOAST ── */
-.toast {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%) translateY(80px);
-  padding: 12px 24px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 500;
-  pointer-events: none;
-  transition: transform 0.3s ease;
-  z-index: 999;
-}
-.toast.show { transform: translateX(-50%) translateY(0); }
-.toast.success { background: var(--green); color: white; }
-.toast.error   { background: var(--red); color: white; }
-.toast.info    { background: var(--accent); color: white; }
-
-/* ── LOADING ── */
-.loading-overlay {
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 10;
-  border-radius: 12px;
-}
-.spinner {
-  width: 28px; height: 28px;
-  border: 2px solid rgba(255,255,255,0.1);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* scrollbar global */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
-
-/* ── NO VIDEO ── */
-.no-video { color: var(--text3); text-align: center; }
-.no-video span { font-size: 32px; display: block; margin-bottom: 8px; }
-</style>
 </head>
+
 <body>
 
-<!-- LOGIN -->
 <div id="loginScreen">
-  <div class="login-logo">⬡ QA REVIEW SYSTEM</div>
-  <div class="login-box">
-    <h2>Welcome back</h2>
-    <p>Sign in to access the QA dashboard</p>
-    <input id="loginName" type="text" placeholder="Your name" autocomplete="off" />
-    <input id="loginEmail" type="email" placeholder="Email address" autocomplete="off" />
-    <button onclick="doLogin()">Sign In →</button>
-  </div>
+  <input id="loginName" placeholder="Name">
+  <input id="loginEmail" placeholder="Email">
+  <button onclick="doLogin()">Login</button>
 </div>
 
-<!-- HEADER -->
-<div class="header">
-  <div class="header-left">
-    <div class="brand">⬡ QA DASHBOARD</div>
-    <div class="stats-row" id="statsRow">
-      <span class="stat-pill stat-total">— total</span>
-      <span class="stat-pill stat-ok">— verified</span>
-      <span class="stat-pill stat-reject">— rejected</span>
-      <span class="stat-pill stat-pending">— filtered</span>
-    </div>
-  </div>
-  <div class="header-right">
-    <span class="reviewer-badge">👤 <span id="reviewerName">—</span></span>
-    <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">☀</button>
-    <button class="icon-btn" onclick="logout()" title="Logout">⏻</button>
-  </div>
+<h3 id="reviewerName"></h3>
+
+<div>
+  <button onclick="goPrev()">Prev</button>
+  <span id="vidCounter"></span>
+  <button onclick="goNext()">Next</button>
 </div>
 
-<!-- APP -->
-<div class="app">
+<div id="videoWrapper"></div>
+<div id="metaPane"></div>
 
-  <!-- SIDEBAR -->
-  <div class="sidebar">
+<textarea id="comment"></textarea>
 
-    <!-- Filters -->
-    <div class="filter-panel">
+<button onclick="selectAction('Approved')">Approve</button>
+<button onclick="selectAction('Rejected')">Reject</button>
+<button onclick="submitReview()">Submit</button>
 
-      <div class="date-tabs" id="dateTabs">
-        <div class="date-tab active" data-val="all" onclick="setDateFilter(this, 'all')">All</div>
-        <div class="date-tab" data-val="today" onclick="setDateFilter(this, 'today')">Today</div>
-        <div class="date-tab" data-val="yesterday" onclick="setDateFilter(this, 'yesterday')">Yesterday</div>
-        <div class="date-tab" data-val="week" onclick="setDateFilter(this, 'week')">7 Days</div>
-      </div>
+<div id="statsRow"></div>
 
-      <select id="fEnterprise"><option value="">All Enterprises</option></select>
-      <select id="fQCUser"><option value="">All QC Users</option></select>
-
-      <select id="fStatus">
-        <option value="">All Statuses</option>
-        <option value="verified">✓ Verified</option>
-        <option value="rejected">✗ Rejected</option>
-        <option value="done">Done</option>
-      </select>
-
-      <div class="filter-row">
-        <input id="fVideoId" placeholder="Video ID…" />
-        <input id="fVin" placeholder="VIN…" />
-      </div>
-      <input id="fSku" placeholder="SKU…" />
-
-      <div class="filter-row">
-        <button class="btn-apply" onclick="applyFilter()">Apply</button>
-        <button class="btn-clear" onclick="clearFilters()">Clear</button>
-      </div>
-
-    </div>
-
-    <!-- Video List -->
-    <div class="video-list" id="videoList">
-      <div class="list-empty">Loading videos…</div>
-    </div>
-
-  </div>
-
-  <!-- MAIN -->
-  <div class="main">
-
-    <!-- Content row -->
-    <div class="content-row">
-
-      <!-- Video Pane -->
-      <div class="video-pane">
-
-        <div class="vid-nav">
-          <button class="nav-btn" onclick="goPrev()">← Prev <span class="kbd">←</span></button>
-          <span class="vid-counter" id="vidCounter">— / —</span>
-          <button class="nav-btn" onclick="goNext()">Next → <span class="kbd">→</span></button>
-        </div>
-
-        <div class="video-wrapper" id="videoWrapper">
-          <div class="no-video">
-            <span>▶</span>
-            Select a video to begin
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Meta Pane -->
-      <div class="meta-pane" id="metaPane">
-        <div class="meta-label">Video Details</div>
-        <div style="color:var(--text3);font-size:13px;">Select a video from the list</div>
-      </div>
-
-    </div>
-
-    <!-- Action Bar -->
-    <div class="action-bar">
-
-      <div class="action-btns">
-        <button class="btn-approve" id="btnApprove" onclick="selectAction('Approved')">
-          ✓ Approve <span class="kbd">A</span>
-        </button>
-        <button class="btn-reject" id="btnReject" onclick="selectAction('Rejected')">
-          ✗ Reject <span class="kbd">R</span>
-        </button>
-        <button class="btn-submit" id="btnSubmit" onclick="submitReview()" disabled>
-          Submit Review ↵
-        </button>
-      </div>
-
-      <div class="comment-row">
-        <textarea class="comment-area" id="comment" placeholder="Add comment or rejection reason…"></textarea>
-        <div class="quick-reasons" id="quickReasons" style="display:none">
-          <div class="reason-btn" onclick="toggleReason(this, 'Voiceover Issue')">Voiceover</div>
-          <div class="reason-btn" onclick="toggleReason(this, 'Background Music Issue')">Music</div>
-          <div class="reason-btn" onclick="toggleReason(this, 'Image removeBG Issue')">removeBG</div>
-          <div class="reason-btn" onclick="toggleReason(this, 'Transition Issue')">Transition</div>
-          <div class="reason-btn" onclick="toggleReason(this, 'Data Issue')">Data</div>
-          <div class="reason-btn" onclick="toggleReason(this, 'Image Selection Issue')">Selection</div>
-          <div class="reason-btn" onclick="toggleReason(this, 'Repeated Images')">Repeated</div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
+<div id="toast"></div>
 
 <script>
-// ─── STATE ───────────────────────────────────────────────
-let reviewer = { name: '', email: '' };
+
+// ───────────────── CONFIG ─────────────────
+const API_URL = "https://script.google.com/macros/s/AKfycbw5n-1nQCHuW-HXFskmTRVXRw_0BZMx_W4s4rSk3Sx0RYF1FvRT4K45dKVOt-vRuMRe/exec";
+
+// ───────────────── STATE ─────────────────
+let reviewer = {};
 let videos = [], filtered = [];
 let currentIdx = -1;
 let currentAction = null;
-let dateFilter = 'all';
-let localReviews = {}; // { video_id: { action, comment, timestamp } }
+let localReviews = {};
 
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&single=true&output=csv";
-
-const API_URL = "https://script.google.com/macros/s/AKfycbwhbgUd2lkk3buW-T8DmDJdHgV5uP60SJ5uGvm8gt2iiw18fEl7Qo4znDsgDWLyTyCN/exec";
-  
-// ─── LOGIN ────────────────────────────────────────────────
+// ───────────────── INIT ─────────────────
 function init() {
   const saved = localStorage.getItem('qa_reviewer');
   if (saved) {
@@ -674,461 +56,143 @@ function init() {
     document.getElementById('reviewerName').textContent = reviewer.name;
     loadData();
   }
-  if (localStorage.getItem('theme') === 'light') document.body.classList.add('light');
   localReviews = JSON.parse(localStorage.getItem('qa_local_reviews') || '{}');
 }
 
+// ───────────────── LOGIN ─────────────────
 function doLogin() {
-  const name = document.getElementById('loginName').value.trim();
-  const email = document.getElementById('loginEmail').value.trim();
-  if (!name || !email) { showToast('Enter name and email', 'error'); return; }
+  const name = loginName.value.trim();
+  const email = loginEmail.value.trim();
+
+  if (!name || !email) {
+    showToast("Enter details", "error");
+    return;
+  }
+
   reviewer = { name, email };
   localStorage.setItem('qa_reviewer', JSON.stringify(reviewer));
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('reviewerName').textContent = name;
+
+  loginScreen.style.display = "none";
+  reviewerName.textContent = name;
+
   loadData();
 }
 
-document.getElementById('loginName').addEventListener('keydown', e => { if(e.key === 'Enter') document.getElementById('loginEmail').focus(); });
-document.getElementById('loginEmail').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
-
-function logout() {
-  localStorage.removeItem('qa_reviewer');
-  location.reload();
-}
-
-// ─── CSV PARSER ───────────────────────────────────────────
-function parseCSV(text) {
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
-  const splitCSV = row => {
-    const cols = [];
-    let cur = '', inQ = false;
-    for (let i = 0; i < row.length; i++) {
-      const c = row[i];
-      if (c === '"') { inQ = !inQ; }
-      else if (c === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
-      else cur += c;
-    }
-    cols.push(cur.trim());
-    return cols;
-  };
-  const headers = splitCSV(lines[0]);
-  return lines.slice(1).map(line => {
-    const cols = splitCSV(line);
-    const obj = {};
-    headers.forEach((h, i) => obj[h.trim()] = (cols[i] || '').replace(/^"|"$/g, '').trim());
-    return obj;
-  });
-}
-
-// ─── LOAD DATA ────────────────────────────────────────────
+// ───────────────── LOAD DATA ─────────────────
 async function loadData() {
-  showToast('Loading data…', 'info');
+  showToast("Loading...", "info");
+
   try {
-    const res = await fetch(SHEET_URL);
-    const text = await res.text();
-    console.log("API RESPONSE:", text);
+    const res = await fetch(API_URL);
+    const rows = await res.json();
 
-    videos = rows
-      .map(r => ({
-        video_id:    r['v.video_id'] || r['video_id'],
-        enterprise:  r['enterprise_name'],
-        enterprise_id: r['v.enterprise_id'],
-        qc_user:     r['qc_user_email_id'],
-        qc_status:   r['qc_user'],
-        status:      (r['verified_status'] || '').toLowerCase(),
-        reason:      r['rejected_reason'],
-        vin:         r['vin_name'],
-        sku:         r['sku_id'],
-        url:         r['video_url'],
-        created:     r['created_on'],
-        updated:     r['updated_on'],
-      }))
-      .filter(v => v.video_id && v.url && v.url.startsWith('http'));
+    videos = rows.map(r => ({
+      video_id: r['v.video_id'] || r['video_id'],
+      status: (r['qa_status'] || r['verified_status'] || '').toLowerCase(),
+      reason: r['qa_reason'],
+      url: r['video_url']
+    })).filter(v => v.video_id && v.url);
 
-    populateFilters();
-    applyFilter();
+    filtered = videos;
+
+    loadVideoAt(0);
     updateStats();
-    showToast(`Loaded ${videos.length} videos`, 'success');
-  } catch(e) {
-    showToast('Failed to load data', 'error');
+
+    showToast("Loaded " + videos.length, "success");
+
+  } catch (e) {
     console.error(e);
+    showToast("Failed to load data", "error");
   }
 }
 
-// ─── FILTERS ─────────────────────────────────────────────
-function setDateFilter(el, val) {
-  document.querySelectorAll('.date-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  dateFilter = val;
-}
+// ───────────────── VIDEO ─────────────────
+function loadVideoAt(i) {
+  if (!filtered[i]) return;
 
-function getDateBound(daysAgo) {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
+  currentIdx = i;
 
-function matchesDateFilter(v) {
-  if (dateFilter === 'all') return true;
-  const d = new Date(v.created);
-  if (isNaN(d)) return true;
-  const now = new Date();
-  if (dateFilter === 'today') {
-    return d >= getDateBound(0);
-  }
-  if (dateFilter === 'yesterday') {
-    return d >= getDateBound(1) && d < getDateBound(0);
-  }
-  if (dateFilter === 'week') {
-    return d >= getDateBound(7);
-  }
-  return true;
-}
+  const v = filtered[i];
 
-function populateFilters() {
-  const enterprises = [...new Set(videos.map(v => v.enterprise).filter(Boolean))].sort();
-  const users = [...new Set(videos.map(v => v.qc_user).filter(u => u && u.includes('@')))].sort();
-
-  const eF = document.getElementById('fEnterprise');
-  eF.innerHTML = '<option value="">All Enterprises</option>' +
-    enterprises.map(e => `<option value="${e}">${e}</option>`).join('');
-
-  const uF = document.getElementById('fQCUser');
-  uF.innerHTML = '<option value="">All QC Users</option>' +
-    users.map(u => `<option value="${u}">${u}</option>`).join('');
-}
-
-function applyFilter() {
-  const ent    = document.getElementById('fEnterprise').value;
-  const user   = document.getElementById('fQCUser').value;
-  const status = document.getElementById('fStatus').value;
-  const vidId  = document.getElementById('fVideoId').value.trim().toLowerCase();
-  const vin    = document.getElementById('fVin').value.trim().toLowerCase();
-  const sku    = document.getElementById('fSku').value.trim().toLowerCase();
-
-  filtered = videos.filter(v =>
-    (!ent    || v.enterprise === ent) &&
-    (!user   || v.qc_user === user) &&
-    (!status || v.status === status) &&
-    (!vidId  || v.video_id.toLowerCase().includes(vidId)) &&
-    (!vin    || (v.vin||'').toLowerCase().includes(vin)) &&
-    (!sku    || (v.sku||'').toLowerCase().includes(sku)) &&
-    matchesDateFilter(v)
-  );
-
-  renderList();
-  updateStats();
-  if (filtered.length) loadVideoAt(0);
-  else {
-    currentIdx = -1;
-    document.getElementById('videoWrapper').innerHTML = '<div class="no-video"><span>🔍</span>No videos match filters</div>';
-    document.getElementById('metaPane').innerHTML = '<div class="meta-label">Video Details</div><div style="color:var(--text3);font-size:13px;">No selection</div>';
-    document.getElementById('vidCounter').textContent = '0 / 0';
-  }
-}
-
-function clearFilters() {
-  document.getElementById('fEnterprise').value = '';
-  document.getElementById('fQCUser').value = '';
-  document.getElementById('fStatus').value = '';
-  document.getElementById('fVideoId').value = '';
-  document.getElementById('fVin').value = '';
-  document.getElementById('fSku').value = '';
-  document.querySelectorAll('.date-tab').forEach(t => t.classList.remove('active'));
-  document.querySelector('.date-tab[data-val="all"]').classList.add('active');
-  dateFilter = 'all';
-  applyFilter();
-}
-
-// ─── RENDER LIST ─────────────────────────────────────────
-function renderList() {
-  const list = document.getElementById('videoList');
-  if (!filtered.length) {
-    list.innerHTML = '<div class="list-empty">No videos found</div>';
-    return;
-  }
-  list.innerHTML = filtered.map((v, i) => {
-    const lr = localReviews[v.video_id];
-    const displayStatus = lr ? lr.action : v.status;
-    const badge = getBadge(displayStatus);
-    const dateStr = v.created ? v.created.slice(0, 10) : '';
-    return `<div class="video-item ${i === currentIdx ? 'active' : ''}" id="vi-${i}" onclick="loadVideoAt(${i})">
-      <div class="vid-enterprise">${v.enterprise || '—'}</div>
-      <div class="vid-badge ${badge.cls}">${badge.label}</div>
-      <div class="vid-id">${v.video_id}</div>
-      <div class="vid-date">${dateStr}</div>
-    </div>`;
-  }).join('');
-}
-
-function getBadge(status) {
-  if (!status) return { cls: 'badge-pending', label: 'Pending' };
-  const s = status.toLowerCase();
-  if (s === 'verified' || s === 'approved') return { cls: 'badge-verified', label: '✓ Verified' };
-  if (s === 'rejected') return { cls: 'badge-reject', label: '✗ Rejected' };
-  if (s === 'done') return { cls: 'badge-done', label: '◉ Done' };
-  return { cls: 'badge-pending', label: s };
-}
-
-// ─── LOAD VIDEO ───────────────────────────────────────────
-function loadVideoAt(idx) {
-  if (idx < 0 || idx >= filtered.length) return;
-  currentIdx = idx;
-  currentAction = null;
-  document.getElementById('btnApprove').classList.remove('selected');
-  document.getElementById('btnReject').classList.remove('selected');
-  document.getElementById('btnSubmit').disabled = true;
-  document.getElementById('quickReasons').style.display = 'none';
-  document.getElementById('comment').value = '';
-  document.querySelectorAll('.reason-btn').forEach(b => b.classList.remove('active'));
-
-  const v = filtered[idx];
-
-  // Check for local review
-  const lr = localReviews[v.video_id];
-  if (lr) {
-    document.getElementById('comment').value = lr.comment || '';
-    selectAction(lr.action, false);
-  }
-
-  // Video
-  const wrapper = document.getElementById('videoWrapper');
-  wrapper.innerHTML = `
-    <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
-    <video id="player" controls preload="metadata">
-      <source src="${v.url}" />
-    </video>`;
-  const player = document.getElementById('player');
-  player.oncanplay = () => { document.getElementById('loadingOverlay')?.remove(); };
-  player.onerror = () => {
-    document.getElementById('loadingOverlay')?.remove();
-    wrapper.innerHTML = `<div class="no-video"><span>⚠</span>Video unavailable</div>`;
-  };
-
-  // Counter
-  document.getElementById('vidCounter').textContent = `${idx + 1} / ${filtered.length}`;
-
-  // Meta
-  renderMeta(v);
-
-  // Highlight list
-  document.querySelectorAll('.video-item').forEach((el, i) => {
-    el.classList.toggle('active', i === idx);
-  });
-
-  // Scroll into view
-  const el = document.getElementById(`vi-${idx}`);
-  el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-}
-
-function renderMeta(v) {
-  const lr = localReviews[v.video_id];
-  const effectiveStatus = lr ? lr.action : v.status;
-  const badge = getBadge(effectiveStatus);
-
-  const dotColor = effectiveStatus === 'Approved' || effectiveStatus === 'verified'
-    ? 'var(--green)'
-    : effectiveStatus === 'Rejected' || effectiveStatus === 'rejected'
-    ? 'var(--red)'
-    : effectiveStatus === 'done' ? 'var(--yellow)'
-    : 'var(--text3)';
-
-  document.getElementById('metaPane').innerHTML = `
-    <div class="meta-label">QC Status</div>
-    <div class="current-status-box">
-      <div class="label">Current Status</div>
-      <div class="status-display">
-        <div class="status-dot" style="background:${dotColor}"></div>
-        <div class="status-text" style="color:${dotColor}">${effectiveStatus || 'Pending Review'}</div>
-      </div>
-      ${v.reason ? `<div style="margin-top:6px;font-size:11px;color:var(--text3)">Reason: ${v.reason}</div>` : ''}
-      ${lr ? `<div style="margin-top:6px;font-size:11px;color:var(--yellow)">★ Local review saved</div>` : ''}
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="meta-label">Video Info</div>
-    <div class="meta-section">
-      ${metaRow('Video ID', v.video_id, true)}
-      ${metaRow('Enterprise', v.enterprise)}
-      ${metaRow('Ent. ID', v.enterprise_id)}
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="meta-label">QC Info</div>
-    <div class="meta-section">
-      ${metaRow('QC User', v.qc_user)}
-      ${metaRow('QC Status', v.qc_status)}
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="meta-label">Asset Info</div>
-    <div class="meta-section">
-      ${metaRow('VIN', v.vin || '—')}
-      ${metaRow('SKU', v.sku || '—', true)}
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="meta-label">Timestamps</div>
-    <div class="meta-section">
-      ${metaRow('Created', v.created)}
-      ${metaRow('Updated', v.updated)}
-    </div>
+  videoWrapper.innerHTML = `
+    <video controls width="500">
+      <source src="${v.url}">
+    </video>
   `;
+
+  vidCounter.textContent = `${i+1} / ${filtered.length}`;
 }
 
-function metaRow(key, val, mono = false) {
-  return `<div class="meta-row">
-    <div class="meta-key">${key}</div>
-    <div class="meta-val${mono ? ' mono' : ''}">${val || '—'}</div>
-  </div>`;
+// ───────────────── NAV ─────────────────
+function goNext() {
+  if (currentIdx < filtered.length - 1) loadVideoAt(currentIdx + 1);
 }
 
-// ─── NAVIGATION ──────────────────────────────────────────
-function goPrev() { if (currentIdx > 0) loadVideoAt(currentIdx - 1); }
-function goNext() { if (currentIdx < filtered.length - 1) loadVideoAt(currentIdx + 1); }
-
-// ─── ACTIONS ─────────────────────────────────────────────
-function selectAction(type, enableSubmit = true) {
-  currentAction = type;
-  document.getElementById('btnApprove').classList.toggle('selected', type === 'Approved');
-  document.getElementById('btnReject').classList.toggle('selected', type === 'Rejected');
-  document.getElementById('quickReasons').style.display = type === 'Rejected' ? 'flex' : 'none';
-  if (enableSubmit) document.getElementById('btnSubmit').disabled = false;
+function goPrev() {
+  if (currentIdx > 0) loadVideoAt(currentIdx - 1);
 }
 
-function toggleReason(btn, reason) {
-  const ta = document.getElementById('comment');
-  if (btn.classList.contains('active')) {
-    btn.classList.remove('active');
-    ta.value = ta.value.replace(reason, '').replace(/,\s*,/g, ',').replace(/^,\s*/, '').replace(/,\s*$/, '').trim();
-  } else {
-    btn.classList.add('active');
-    ta.value = ta.value ? ta.value + ', ' + reason : reason;
-  }
+// ───────────────── ACTION ─────────────────
+function selectAction(a) {
+  currentAction = a;
 }
 
+// ───────────────── SUBMIT ─────────────────
 async function submitReview() {
   if (!currentAction) return;
 
   const v = filtered[currentIdx];
-  const comment = document.getElementById('comment').value.trim();
+  const comment = document.getElementById("comment").value;
 
-  if (currentAction === 'Rejected' && !comment) {
-    showToast('Add a rejection reason', 'error');
-    document.getElementById('comment').focus();
+  if (currentAction === "Rejected" && !comment) {
+    showToast("Add reason", "error");
     return;
   }
 
-  const payload = {
-    video_id: v.video_id,
-    action: currentAction,
-    comment: comment,
-    reviewer: reviewer.email
-  };
-
   try {
-    showToast('Saving to sheet...', 'info');
-
     const res = await fetch(API_URL, {
       method: "POST",
-      body: JSON.stringify(payload),
-      headers: {
-        "Content-Type": "application/json"
-      }
+      body: JSON.stringify({
+        video_id: v.video_id,
+        action: currentAction,
+        comment,
+        reviewer: reviewer.email
+      })
     });
 
-    const result = await res.json();
+    const text = await res.text();
+    console.log(text);
 
-    if (!result.success) {
-      throw new Error(result.error || "Unknown error");
-    }
+    const result = JSON.parse(text);
 
-    // ✅ Keep local backup (optional but useful)
-    localReviews[v.video_id] = {
-      action: currentAction,
-      comment,
-      reviewer: reviewer.email,
-      timestamp: new Date().toISOString()
-    };
-    localStorage.setItem('qa_local_reviews', JSON.stringify(localReviews));
+    if (!result.success) throw new Error();
 
-    // ✅ Update UI
-    const el = document.getElementById(`vi-${currentIdx}`);
-    if (el) {
-      const badge = el.querySelector('.vid-badge');
-      const b = getBadge(currentAction);
-      badge.className = `vid-badge ${b.cls}`;
-      badge.textContent = b.label;
-    }
+    localReviews[v.video_id] = { action: currentAction, comment };
+    localStorage.setItem("qa_local_reviews", JSON.stringify(localReviews));
 
-    renderMeta(v);
-    updateStats();
+    showToast("Saved", "success");
+    goNext();
 
-    showToast(`${currentAction} — saved to sheet`, 'success');
-
-    // Auto next
-    setTimeout(() => {
-      if (currentIdx < filtered.length - 1) goNext();
-    }, 500);
-
-  } catch (err) {
-    console.error(err);
-    showToast('Failed to save to sheet', 'error');
+  } catch (e) {
+    showToast("Save failed", "error");
   }
 }
 
-// ─── STATS ───────────────────────────────────────────────
+// ───────────────── STATS ─────────────────
 function updateStats() {
-  const total     = videos.length;
-  const verified  = videos.filter(v => v.status === 'verified').length;
-  const rejected  = videos.filter(v => v.status === 'rejected').length;
-  const filtCount = filtered.length;
-
-  const row = document.getElementById('statsRow');
-  row.innerHTML = `
-    <span class="stat-pill stat-total">${total} total</span>
-    <span class="stat-pill stat-ok">${verified} verified</span>
-    <span class="stat-pill stat-reject">${rejected} rejected</span>
-    <span class="stat-pill stat-pending">${filtCount} filtered</span>
-  `;
+  statsRow.innerText = `Total: ${videos.length}`;
 }
 
-// ─── THEME ───────────────────────────────────────────────
-function toggleTheme() {
-  document.body.classList.toggle('light');
-  localStorage.setItem('theme', document.body.classList.contains('light') ? 'light' : 'dark');
+// ───────────────── TOAST ─────────────────
+function showToast(msg, type) {
+  toast.innerText = msg;
+  setTimeout(() => toast.innerText = "", 2000);
 }
 
-// ─── TOAST ───────────────────────────────────────────────
-let toastTimer;
-function showToast(msg, type = 'info') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast ${type} show`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-// ─── KEYBOARD ────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  const tag = document.activeElement.tagName.toLowerCase();
-  if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
-
-  if (e.key.toLowerCase() === 'a') selectAction('Approved');
-  if (e.key.toLowerCase() === 'r') selectAction('Rejected');
-  if (e.key === 'Enter') submitReview();
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goPrev();
-  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goNext();
-});
-
-// ─── BOOT ─────────────────────────────────────────────────
+// ───────────────── START ─────────────────
 init();
+
 </script>
+
 </body>
 </html>
