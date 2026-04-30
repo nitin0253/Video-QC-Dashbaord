@@ -6,24 +6,25 @@
 <title>QA Review Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ── CLAUDE-STYLE DARK GREY THEME ── */
+/* ── GRAY + BLUE THEME ── */
 :root {
-  --bg:       #212121;
-  --surface:  #2f2f2f;
-  --surface2: #3a3a3a;
-  --surface3: #404040;
-  --surface4: #4a4a4a;
-  --border:   rgba(255,255,255,0.08);
-  --border2:  rgba(255,255,255,0.14);
-  --accent:   #d97706;
-  --accent2:  #f59e0b;
-  --text:     #ececec;
-  --text2:    #a0a0a0;
-  --text3:    #6b6b6b;
+  --bg:       #1a1d21;
+  --surface:  #22262c;
+  --surface2: #2a2f37;
+  --surface3: #333b46;
+  --surface4: #3c4552;
+  --border:   rgba(255,255,255,0.07);
+  --border2:  rgba(255,255,255,0.12);
+  --accent:   #3b82f6;
+  --accent2:  #60a5fa;
+  --text:     #e8ecf0;
+  --text2:    #94a3b8;
+  --text3:    #5a6578;
   --green:    #22c55e;
   --red:      #ef4444;
   --yellow:   #f59e0b;
   --purple:   #a855f7;
+  --blue:     #3b82f6;
   --mono: 'JetBrains Mono', monospace;
   --sans: 'Geist', sans-serif;
   --font-body: var(--sans);
@@ -31,16 +32,16 @@
   --sidebar-open-w: 220px;
 }
 body.light {
-  --bg:      #f5f5f5;
+  --bg:      #f0f4f8;
   --surface: #ffffff;
-  --surface2:#f0f0f0;
-  --surface3:#e8e8e8;
-  --surface4:#e0e0e0;
-  --border:  rgba(0,0,0,0.08);
-  --border2: rgba(0,0,0,0.14);
-  --text:    #111111;
-  --text2:   #555555;
-  --text3:   #999999;
+  --surface2:#edf2f7;
+  --surface3:#e2e8f0;
+  --surface4:#d8e2ed;
+  --border:  rgba(0,0,0,0.07);
+  --border2: rgba(0,0,0,0.12);
+  --text:    #111827;
+  --text2:   #4b5563;
+  --text3:   #9ca3af;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{
@@ -52,7 +53,7 @@ body{
   transition:background .25s,color .25s;
 }
 
-/* ══════════ SCREENS (login + enterprise) ══════════ */
+/* ══════════ SCREENS ══════════ */
 .screen{
   position:fixed;inset:0;z-index:200;
   background:var(--bg);
@@ -92,41 +93,40 @@ body{
 /* ── ENTERPRISE PICKER ── */
 .ent-card{
   background:var(--surface);border:1px solid var(--border2);
-  border-radius:18px;padding:28px 32px;width:620px;max-width:95vw;
+  border-radius:18px;padding:28px 32px;width:580px;max-width:95vw;
   box-shadow:0 24px 60px rgba(0,0,0,.5);
-  display:flex;flex-direction:column;gap:16px;
+  display:flex;flex-direction:column;gap:14px;
+  max-height:90vh;
 }
 .ent-card h2{font-size:18px;font-weight:600;}
 .ent-card .sub{font-size:12px;color:var(--text2);}
 .ent-total{
   display:flex;align-items:center;justify-content:space-between;
-  padding:11px 16px;background:rgba(217,119,6,.08);
-  border:1px solid rgba(217,119,6,.18);border-radius:10px;
+  padding:11px 16px;background:rgba(59,130,246,.08);
+  border:1px solid rgba(59,130,246,.18);border-radius:10px;
+  flex-shrink:0;
 }
 .ent-total .lbl{font-size:12px;color:var(--text2);}
 .ent-total .num{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent2);}
-.batch-row{display:flex;align-items:center;gap:10px;}
-.batch-row label{font-size:12px;color:var(--text2);}
-.batch-row input{
-  width:64px;padding:6px 10px;border-radius:7px;
-  border:1px solid var(--border2);background:var(--surface2);
-  color:var(--text);font-family:var(--mono);font-size:13px;outline:none;
+.ent-list{
+  display:flex;flex-direction:column;gap:7px;
+  overflow-y:auto;flex:1;padding-right:4px;
+  min-height:0;
 }
-.batch-row input:focus{border-color:var(--accent);}
-.ent-list{display:flex;flex-direction:column;gap:7px;max-height:360px;overflow-y:auto;padding-right:4px;}
 .ent-list::-webkit-scrollbar{width:3px;}
 .ent-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
 .ent-row{
   display:flex;align-items:center;justify-content:space-between;
   padding:13px 16px;border-radius:10px;border:1px solid var(--border);
   background:var(--surface2);cursor:pointer;transition:all .15s;gap:12px;
+  flex-shrink:0;
 }
 .ent-row:hover{border-color:var(--accent);background:var(--surface3);}
 .ent-row .name{font-size:13px;font-weight:500;}
 .ent-row .hint{font-size:11px;color:var(--text3);margin-top:2px;}
 .ent-row-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
 .pill{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:14px;font-weight:600;white-space:nowrap;}
-.pill-pending{background:rgba(245,158,11,.1);color:var(--yellow);}
+.pill-pending{background:rgba(59,130,246,.1);color:var(--accent2);}
 .pill-done   {background:rgba(34,197,94,.1); color:var(--green);}
 .claim-btn{
   padding:6px 14px;background:var(--accent);color:#fff;
@@ -134,15 +134,16 @@ body{
   cursor:pointer;transition:opacity .15s;white-space:nowrap;
 }
 .claim-btn:hover{opacity:.85;}
-.ent-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:4px;}
+.claim-btn:disabled{opacity:.4;cursor:not-allowed;}
+.ent-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0;}
 .link-btn{font-size:12px;color:var(--accent2);cursor:pointer;background:none;border:none;font-family:var(--font-body);}
 .link-btn:hover{text-decoration:underline;}
 .btn-outline{
-  padding:9px 20px;background:var(--surface2);color:var(--text2);
-  border:1px solid var(--border2);border-radius:9px;font-size:13px;
-  cursor:pointer;transition:all .15s;font-family:var(--font-body);
+  padding:9px 20px;background:var(--accent);color:#fff;
+  border:none;border-radius:9px;font-size:13px;font-weight:600;
+  cursor:pointer;transition:opacity .15s;font-family:var(--font-body);
 }
-.btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+.btn-outline:hover{opacity:.88;}
 
 /* ══════════ OUTER SHELL ══════════ */
 .shell{display:flex;height:100vh;overflow:hidden;}
@@ -184,7 +185,7 @@ body{
   font-size:13px;width:100%;text-align:left;
 }
 .snav-item:hover{background:var(--surface2);color:var(--text);}
-.snav-item.active{background:var(--surface3);color:var(--text);}
+.snav-item.active{background:rgba(59,130,246,.15);color:var(--accent2);}
 .snav-item svg,.snav-item .sico{flex-shrink:0;width:18px;text-align:center;font-size:15px;}
 .snav-label{opacity:0;transition:opacity .18s .04s;font-size:13px;}
 .left-sidebar.open .snav-label{opacity:1;}
@@ -209,11 +210,11 @@ body{
 .header-right{display:flex;align-items:center;gap:8px;margin-left:auto;padding:0 16px;}
 .batch-pill{
   font-size:11px;padding:4px 10px;border-radius:14px;
-  background:rgba(217,119,6,.1);color:var(--accent2);
-  border:1px solid rgba(217,119,6,.2);font-family:var(--mono);
+  background:rgba(59,130,246,.1);color:var(--accent2);
+  border:1px solid rgba(59,130,246,.2);font-family:var(--mono);
   cursor:pointer;white-space:nowrap;transition:background .15s;
 }
-.batch-pill:hover{background:rgba(217,119,6,.18);}
+.batch-pill:hover{background:rgba(59,130,246,.18);}
 .queue-badge{
   display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:14px;
   font-size:11px;font-weight:500;font-family:var(--mono);
@@ -231,27 +232,15 @@ body{
 .icon-btn:hover{border-color:var(--accent);color:var(--accent);}
 .icon-btn.spinning{animation:spin .8s linear infinite;}
 
-/* ══════════ NAV TABS ══════════ */
-.nav-tabs{
-  display:flex;gap:0;padding:0 0;
-  background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;
-}
-.nav-tab{
-  padding:9px 20px;font-size:12px;font-weight:500;cursor:pointer;
-  color:var(--text3);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;
-}
-.nav-tab:hover{color:var(--text2);}
-.nav-tab.active{color:var(--text);border-bottom-color:var(--accent);}
-
 /* ══════════ APP BODY ══════════ */
 .app-body{display:flex;flex:1;overflow:hidden;}
 
-/* ══════════ SIDEBAR (filter) ══════════ */
+/* ══════════ FILTER SIDEBAR ══════════ */
 .filter-sidebar{
   width:260px;flex-shrink:0;display:flex;flex-direction:column;
   border-right:1px solid var(--border);background:var(--surface);overflow:hidden;
 }
-.filter-panel{padding:10px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:7px;}
+.filter-panel{padding:10px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:7px;flex-shrink:0;}
 .filter-panel input,.filter-panel select{
   width:100%;padding:7px 11px;border-radius:7px;
   border:1px solid var(--border);background:var(--surface2);
@@ -282,6 +271,7 @@ body{
 .toggle-row{
   display:flex;align-items:center;justify-content:space-between;
   padding:8px 10px;border-bottom:1px solid var(--border);background:var(--surface2);
+  flex-shrink:0;
 }
 .toggle-row label{font-size:11px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:7px;}
 .tog{position:relative;width:30px;height:17px;flex-shrink:0;}
@@ -292,18 +282,18 @@ input:checked+.tog-slider{background:var(--accent);border-color:var(--accent);}
 input:checked+.tog-slider:before{transform:translateX(13px);background:#fff;}
 
 /* custom chips */
-.chip-section{padding:7px 10px;border-bottom:1px solid var(--border);}
+.chip-section{padding:7px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
 .chip{
   display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:11px;
-  font-size:11px;background:rgba(168,85,247,.1);color:#c084fc;
-  border:1px solid rgba(168,85,247,.18);margin:2px;cursor:pointer;transition:all .13s;
+  font-size:11px;background:rgba(59,130,246,.1);color:var(--accent2);
+  border:1px solid rgba(59,130,246,.18);margin:2px;cursor:pointer;transition:all .13s;
 }
-.chip:hover{background:rgba(168,85,247,.18);}
-.chip.active{background:var(--purple);color:#fff;border-color:var(--purple);}
+.chip:hover{background:rgba(59,130,246,.18);}
+.chip.active{background:var(--blue);color:#fff;border-color:var(--blue);}
 .chip .x{opacity:.55;font-size:10px;}
 
 /* video list */
-.video-list{flex:1;overflow-y:auto;}
+.video-list{flex:1;overflow-y:auto;min-height:0;}
 .video-list::-webkit-scrollbar{width:3px;}
 .video-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
 .list-empty{padding:36px 16px;text-align:center;color:var(--text3);font-size:12px;line-height:1.6;}
@@ -323,9 +313,9 @@ input:checked+.tog-slider:before{transform:translateX(13px);background:#fff;}
 }
 .b-verified{background:rgba(34,197,94,.1); color:var(--green);}
 .b-rejected{background:rgba(239,68,68,.1); color:var(--red);}
-.b-done    {background:rgba(245,158,11,.1);color:var(--yellow);}
+.b-done    {background:rgba(59,130,246,.1);color:var(--accent2);}
 .b-pending {background:rgba(255,255,255,.06);color:var(--text3);}
-.b-qa      {background:rgba(217,119,6,.12);color:var(--accent2);}
+.b-qa      {background:rgba(59,130,246,.12);color:var(--accent2);}
 
 /* ══════════ MAIN CONTENT ══════════ */
 .content{flex:1;display:flex;flex-direction:column;overflow:hidden;}
@@ -343,7 +333,7 @@ input:checked+.tog-slider:before{transform:translateX(13px);background:#fff;}
   display:flex;align-items:center;justify-content:center;position:relative;min-height:0;
 }
 video{width:100%;height:100%;object-fit:contain;display:block;}
-.vid-nav{display:flex;align-items:center;justify-content:space-between;}
+.vid-nav{display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .nav-btn{
   padding:6px 14px;border-radius:7px;border:1px solid var(--border);
   background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer;
@@ -374,7 +364,7 @@ video{width:100%;height:100%;object-fit:contain;display:block;}
 /* ACTION BAR */
 .action-bar{
   padding:11px 14px;background:var(--surface);border-top:1px solid var(--border);
-  display:flex;flex-direction:column;gap:9px;
+  display:flex;flex-direction:column;gap:9px;flex-shrink:0;
 }
 .action-row{display:flex;gap:9px;align-items:center;flex-wrap:wrap;}
 .btn-approve{
@@ -458,9 +448,10 @@ tbody td{padding:9px 13px;font-size:12px;color:var(--text2);}
 tbody td.mono{font-family:var(--mono);font-size:11px;}
 .jmp{
   padding:3px 9px;border-radius:5px;border:1px solid var(--border);
-  background:var(--surface2);color:var(--text2);font-size:11px;cursor:pointer;transition:all .12s;
+  background:var(--surface2);color:var(--accent2);font-size:11px;cursor:pointer;transition:all .12s;
+  text-decoration:none;display:inline-block;
 }
-.jmp:hover{border-color:var(--accent);color:var(--accent);}
+.jmp:hover{border-color:var(--accent);background:rgba(59,130,246,.1);}
 .export-btn{
   padding:6px 14px;border-radius:7px;background:var(--surface2);color:var(--text2);
   border:1px solid var(--border);font-size:12px;cursor:pointer;transition:all .15s;
@@ -476,10 +467,11 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
 }
 .settings-overlay.open{opacity:1;pointer-events:all;}
 .settings-panel{
-  width:460px;max-width:95vw;background:var(--surface);
+  width:500px;max-width:95vw;background:var(--surface);
   border-left:1px solid var(--border2);display:flex;flex-direction:column;
   transform:translateX(100%);transition:transform .22s cubic-bezier(.4,0,.2,1);
   overflow:hidden;
+  height:100%;
 }
 .settings-overlay.open .settings-panel{transform:translateX(0);}
 .settings-panel-header{
@@ -493,22 +485,27 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
   display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s;
 }
 .close-btn:hover{border-color:var(--accent);color:var(--accent);}
-.settings-scroll{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
-.settings-scroll::-webkit-scrollbar{width:3px;}
-.settings-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
-.s-section{background:var(--surface2);border:1px solid var(--border);border-radius:11px;overflow:hidden;}
+/* FIX 4: settings scroll is flex:1 + overflow-y:auto so it scrolls properly */
+.settings-scroll{
+  flex:1;overflow-y:auto;padding:16px;
+  display:flex;flex-direction:column;gap:12px;
+  min-height:0;
+}
+.settings-scroll::-webkit-scrollbar{width:4px;}
+.settings-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+.s-section{background:var(--surface2);border:1px solid var(--border);border-radius:11px;overflow:hidden;flex-shrink:0;}
 .s-section-head{
   padding:11px 14px;font-size:12px;font-weight:600;color:var(--text2);
   border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;
 }
 .s-body{padding:14px;display:flex;flex-direction:column;gap:11px;}
-.s-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.s-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;}
 .s-lbl{font-size:12px;color:var(--text);}
 .s-sub{font-size:11px;color:var(--text3);margin-top:2px;}
 .s-input{
   padding:7px 11px;border-radius:7px;border:1px solid var(--border);
   background:var(--surface3);color:var(--text);font-size:12px;font-family:var(--font-body);
-  outline:none;transition:border .15s;min-width:170px;
+  outline:none;transition:border .15s;min-width:170px;width:100%;
 }
 .s-input:focus{border-color:var(--accent);}
 /* font grid */
@@ -518,7 +515,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
   background:var(--surface3);cursor:pointer;transition:all .15s;
 }
 .font-card:hover{border-color:var(--border2);}
-.font-card.active{border-color:var(--accent);background:rgba(217,119,6,.06);}
+.font-card.active{border-color:var(--accent);background:rgba(59,130,246,.06);}
 .font-card .fn{font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:4px;}
 .font-card .fp{font-size:14px;color:var(--text);}
 /* filter builder */
@@ -558,7 +555,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
 .btn-save:hover{opacity:.88;}
 .settings-footer{padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;}
 
-/* ══════════ MODAL (re-append) ══════════ */
+/* ══════════ MODAL ══════════ */
 .modal-bg{
   position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:400;
   display:none;align-items:center;justify-content:center;
@@ -621,7 +618,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
 
-/* REVIEWER BADGE (in sidebar) */
+/* REVIEWER BADGE */
 .rev-badge{
   display:flex;align-items:center;gap:8px;padding:8px 10px;
   border-radius:8px;width:100%;overflow:hidden;
@@ -633,6 +630,9 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
 }
 .rev-name{font-size:12px;color:var(--text2);opacity:0;transition:opacity .18s .04s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .left-sidebar.open .rev-name{opacity:1;}
+
+/* Stats row */
+#statsRow{padding:8px 10px;border-bottom:1px solid var(--border);display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -651,26 +651,22 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
 </div>
 
 <!-- ══════════ ENTERPRISE PICKER ══════════ -->
+<!-- FIX 1: Removed batch input. Simple enterprise list with counts. "Load All Pending" loads everything -->
 <div class="screen hidden" id="entScreen">
   <div class="app-logo">⬡ QA REVIEW SYSTEM</div>
   <div class="ent-card">
     <div>
       <h2>Select Enterprise</h2>
-      <p class="sub">Choose an enterprise to QA. Your batch will be claimed exclusively so no one else reviews the same videos.</p>
+      <p class="sub">Click "Start QA" on any enterprise to begin reviewing, or load all pending videos at once.</p>
     </div>
     <div class="ent-total">
       <span class="lbl">Total pending QA across all enterprises</span>
       <span class="num" id="entTotal">—</span>
     </div>
-    <div class="batch-row">
-      <label for="batchInput">Batch size:</label>
-      <input id="batchInput" type="number" value="50" min="5" max="500"/>
-      <span style="font-size:11px;color:var(--text3);">videos per claim</span>
-    </div>
     <div class="ent-list" id="entList"><div style="padding:20px;text-align:center;color:var(--text3);">Loading…</div></div>
     <div class="ent-footer">
       <button class="link-btn" onclick="buildEntList()">↻ Refresh counts</button>
-      <button class="btn-outline" onclick="claimBatch(null)">Load All Pending (no filter)</button>
+      <button class="btn-outline" onclick="claimBatch(null)">Load All Pending →</button>
     </div>
   </div>
 </div>
@@ -696,7 +692,6 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
 
     <div class="sidebar-bottom">
       <div class="sidebar-divider"></div>
-      <!-- Reviewer badge -->
       <div class="rev-badge">
         <div class="rev-avatar" id="revAvatar">—</div>
         <div class="rev-name" id="revName">—</div>
@@ -735,10 +730,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
 
       <!-- FILTER SIDEBAR -->
       <div class="filter-sidebar">
-        <!-- Stats at top of filter sidebar -->
-        <div style="padding:8px 10px;border-bottom:1px solid var(--border);display:flex;gap:5px;flex-wrap:wrap;" id="statsRow">
-          <span style="font-size:10px;color:var(--text3);">Loading…</span>
-        </div>
+        <div id="statsRow"><span style="font-size:10px;color:var(--text3);">Loading…</span></div>
 
         <div class="filter-panel">
           <div class="date-tabs">
@@ -766,7 +758,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
           </div>
         </div>
 
-        <!-- Show QA'd toggle -->
+        <!-- FIX 5: Toggle row — show already QA'd -->
         <div class="toggle-row">
           <label>
             <label class="tog">
@@ -865,10 +857,10 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
           </div>
         </div>
 
-      </div><!-- /content -->
-    </div><!-- /app-body -->
-  </div><!-- /main-area -->
-</div><!-- /shell -->
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════ SETTINGS SLIDE-IN ══════════ -->
 <div class="settings-overlay" id="settingsOverlay" onclick="closeSettings(event)">
@@ -877,15 +869,14 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
       <h3>⚙ Settings</h3>
       <button class="close-btn" onclick="closeSettingsPanel()">✕</button>
     </div>
+    <!-- FIX 4: settings-scroll properly scrollable -->
     <div class="settings-scroll">
 
-      <!-- Font -->
       <div class="s-section">
         <div class="s-section-head">🔤 Font Style</div>
         <div class="s-body"><div class="font-grid" id="fontGrid"></div></div>
       </div>
 
-      <!-- Column mapping -->
       <div class="s-section">
         <div class="s-section-head">🔗 QC Column Mapping</div>
         <div class="s-body">
@@ -898,7 +889,6 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
         </div>
       </div>
 
-      <!-- Custom filters -->
       <div class="s-section">
         <div class="s-section-head">🎛 Custom Quick Filters</div>
         <div class="s-body">
@@ -917,7 +907,6 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
         </div>
       </div>
 
-      <!-- Re-append -->
       <div class="s-section">
         <div class="s-section-head">♻ Re-append QA Data</div>
         <div class="s-body">
@@ -929,7 +918,6 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
         </div>
       </div>
 
-      <!-- Email → Name -->
       <div class="s-section">
         <div class="s-section-head">👤 Email → Name Lookup</div>
         <div class="s-body">
@@ -942,16 +930,15 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
         </div>
       </div>
 
-      <!-- Sheet config -->
       <div class="s-section">
         <div class="s-section-head">⚙ Sheet & API Config</div>
         <div class="s-body">
           <div class="s-row">
-            <div><div class="s-lbl">Sheet CSV URL</div><div class="s-sub">Published CSV from Google Sheets</div></div>
+            <div style="flex-shrink:0;"><div class="s-lbl">Sheet CSV URL</div><div class="s-sub">Published CSV from Google Sheets</div></div>
             <input id="cfgSheet" class="s-input" placeholder="https://docs.google.com/…"/>
           </div>
           <div class="s-row">
-            <div><div class="s-lbl">Apps Script URL</div><div class="s-sub">doPost endpoint</div></div>
+            <div style="flex-shrink:0;"><div class="s-lbl">Apps Script URL</div><div class="s-sub">doPost endpoint</div></div>
             <input id="cfgGas" class="s-input" placeholder="https://script.google.com/…"/>
           </div>
           <button class="btn-save" onclick="saveCfg()">Save Config</button>
@@ -1004,7 +991,7 @@ const FONTS = [
 // ─────────────────────────────────────────────
 let reviewer     = {name:'',email:''};
 let allVideos    = [];
-let videos       = [];   // batch slice
+let videos       = [];
 let filtered     = [];
 let claimedIds   = new Set();
 let currentIdx   = -1;
@@ -1018,7 +1005,6 @@ let emailMap     = {};
 let colMap       = {qcStatus:'',qcUser:''};
 let currentPage  = 'review';
 let curEnterprise= null;
-let batchSize    = 50;
 let sidebarOpen  = false;
 
 // ─────────────────────────────────────────────
@@ -1031,7 +1017,6 @@ function init() {
   emailMap      = JSON.parse(ls('qa_email_name_map') || '{}');
   colMap        = JSON.parse(ls('qa_column_map')     || '{"qcStatus":"","qcUser":""}');
   claimedIds    = new Set(JSON.parse(ls('qa_claimed_ids') || '[]'));
-  batchSize     = parseInt(ls('qa_batch_size') || '50');
   if (ls('qa_sheet_url')) SHEET_URL = ls('qa_sheet_url');
   if (ls('qa_gas_url'))   GAS_URL   = ls('qa_gas_url');
   if (ls('theme') === 'light') document.body.classList.add('light');
@@ -1195,65 +1180,68 @@ function isQAed(v) {
 }
 
 // ─────────────────────────────────────────────
-//  ENTERPRISE PICKER
+//  FIX 1: ENTERPRISE PICKER — no batch size, simple counts
 // ─────────────────────────────────────────────
 function buildEntList() {
   const pending = allVideos.filter(v=>!isQAed(v));
   document.getElementById('entTotal').textContent = pending.length + ' pending';
-  const bsz = parseInt(document.getElementById('batchInput').value)||50;
 
   const map = {};
-  pending.forEach(v=>{ const e=v.enterprise||'(Unknown)'; map[e]=(map[e]||0)+1; });
-  const ents = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  allVideos.forEach(v=>{
+    const e = v.enterprise||'(Unknown)';
+    if (!map[e]) map[e] = {total:0, pending:0};
+    map[e].total++;
+    if (!isQAed(v)) map[e].pending++;
+  });
+
+  const ents = Object.entries(map).sort((a,b)=>b[1].pending-a[1].pending);
 
   if (!ents.length) {
     document.getElementById('entList').innerHTML='<div style="padding:20px;text-align:center;color:var(--green);">🎉 All videos QA\'d!</div>';
     return;
   }
-  document.getElementById('entList').innerHTML = ents.map(([name,cnt])=>`
+  document.getElementById('entList').innerHTML = ents.map(([name,counts])=>`
     <div class="ent-row">
       <div>
         <div class="name">${escH(name)}</div>
-        <div class="hint">${Math.min(cnt,bsz)} of ${cnt} will be claimed</div>
+        <div class="hint">${counts.total} total videos</div>
       </div>
       <div class="ent-row-right">
-        <span class="pill ${cnt>0?'pill-pending':'pill-done'}">${cnt} pending</span>
-        <button class="claim-btn" onclick="claimBatch('${escH(name)}')" ${cnt===0?'disabled':''}>Start QA →</button>
+        <span class="pill ${counts.pending>0?'pill-pending':'pill-done'}">${counts.pending} pending</span>
+        <button class="claim-btn" onclick="claimBatch('${escH(name)}')" ${counts.pending===0?'disabled':''}>Start QA →</button>
       </div>
     </div>`).join('');
 }
-document.getElementById('batchInput').addEventListener('input', buildEntList);
 
+// FIX 1: claimBatch loads ALL videos for the enterprise (no batch limit)
 async function claimBatch(enterprise) {
-  batchSize = parseInt(document.getElementById('batchInput').value)||50;
-  lsSet('qa_batch_size', String(batchSize));
   curEnterprise = enterprise;
 
-  const now = Date.now();
+  // Load ALL pending for the selected enterprise (or all if null)
   const pool = allVideos.filter(v=>{
-    if (isQAed(v)) return false;
     if (enterprise && v.enterprise!==enterprise) return false;
-    if (v.qa_claimed_by && v.qa_claimed_by!==reviewer.email) {
-      const age = (now - new Date(v.qa_claimed_at||0).getTime()) / 60000;
-      if (age < CLAIM_TTL_MIN) return false;
-    }
-    return true;
+    return true; // include both pending and QA'd so toggle works
   });
 
-  const batch = pool.slice(0, batchSize);
-  claimedIds = new Set(batch.map(v=>v.video_id));
+  // Track the pending ones for claiming
+  const pendingPool = pool.filter(v=>!isQAed(v));
+  claimedIds = new Set(pendingPool.map(v=>v.video_id));
   lsSet('qa_claimed_ids', [...claimedIds]);
 
   // Fire-and-forget claim
-  postToSheet({action:'claim', video_ids:[...claimedIds], reviewer:reviewer.email, timestamp:new Date().toISOString()});
+  if (pendingPool.length > 0) {
+    postToSheet({action:'claim', video_ids:[...claimedIds], reviewer:reviewer.email, timestamp:new Date().toISOString()});
+  }
 
   hideScreens();
-  applyBatch();
+  // videos = all videos for this enterprise (so toggle can show QA'd ones)
+  videos = pool;
+  applyFilter();
   populateSidebarFilters();
   populateSumFilters();
   updateStats();
   updateBatchPill();
-  toast(`✓ Claimed ${batch.length} videos${enterprise?' from '+enterprise:''}`,'success');
+  toast(`✓ Loaded ${pool.length} videos${enterprise?' from '+enterprise:''} (${pendingPool.length} pending)`,'success');
 }
 
 function showEntScreen() { buildEntList(); showScreen('entScreen'); }
@@ -1271,12 +1259,22 @@ function updateBatchPill() {
 //  BATCH → FILTER PIPELINE
 // ─────────────────────────────────────────────
 function applyBatch() {
-  videos = claimedIds.size>0 ? allVideos.filter(v=>claimedIds.has(v.video_id)) : [...allVideos];
+  if (claimedIds.size > 0) {
+    // Get the enterprise from claimed IDs
+    const firstClaimed = allVideos.find(v=>claimedIds.has(v.video_id));
+    const ent = firstClaimed ? firstClaimed.enterprise : null;
+    // Include ALL videos from that enterprise (for toggle to work)
+    videos = ent
+      ? allVideos.filter(v=>v.enterprise===ent)
+      : allVideos;
+  } else {
+    videos = [...allVideos];
+  }
   applyFilter();
 }
 
 // ─────────────────────────────────────────────
-//  FILTERS
+//  FILTERS — FIX 5: Toggle properly controls QA'd display
 // ─────────────────────────────────────────────
 function setDate(el, v) {
   document.querySelectorAll('.date-tab').forEach(t=>t.classList.remove('active'));
@@ -1300,6 +1298,7 @@ function populateSidebarFilters() {
   document.getElementById('fEnt').innerHTML  = '<option value="">All Enterprises</option>'+ents.map(e=>`<option value="${e}">${e}</option>`).join('');
   document.getElementById('fUser').innerHTML = '<option value="">All QC Users</option>'   +users.map(u=>`<option value="${u}">${u}</option>`).join('');
 }
+
 function applyFilter(cfObj) {
   const ent    = document.getElementById('fEnt').value;
   const user   = document.getElementById('fUser').value;
@@ -1307,10 +1306,12 @@ function applyFilter(cfObj) {
   const vidId  = document.getElementById('fVid').value.trim().toLowerCase();
   const vin    = document.getElementById('fVin').value.trim().toLowerCase();
   const sku    = document.getElementById('fSku').value.trim().toLowerCase();
+  // FIX 5: Read toggle state properly
   const showQA = document.getElementById('togQAed').checked;
   const cf     = cfObj || null;
 
   filtered = videos.filter(v=>{
+    // FIX 5: If showQA is OFF, hide already-QA'd videos. If ON, show all.
     if (!showQA && isQAed(v)) return false;
     if (ent    && v.enterprise!==ent)   return false;
     if (user   && v.qc_user  !==user)   return false;
@@ -1335,11 +1336,13 @@ function applyFilter(cfObj) {
   if (filtered.length) loadVideoAt(0);
   else {
     currentIdx=-1;
-    document.getElementById('videoWrap').innerHTML='<div class="no-vid"><span>🎉</span>Nothing pending in this batch</div>';
+    const showQAed = document.getElementById('togQAed').checked;
+    document.getElementById('videoWrap').innerHTML=`<div class="no-vid"><span>${showQAed?'🎉':'▶'}</span>${showQAed?'Nothing to show':'Toggle "Show already QA\'d" to see reviewed videos'}</div>`;
     document.getElementById('metaPane').innerHTML ='<div class="m-label">Details</div><div style="font-size:12px;color:var(--text3);">No videos match</div>';
     document.getElementById('vidCtr').textContent ='0 / 0';
   }
 }
+
 function clearFilters() {
   ['fEnt','fUser','fStatus','fVid','fVin','fSku'].forEach(id=>document.getElementById(id).value='');
   document.querySelectorAll('.date-tab').forEach(t=>t.classList.remove('active'));
@@ -1379,7 +1382,10 @@ function removeCF(i) {
 function renderList() {
   const list=document.getElementById('videoList');
   if (!filtered.length) {
-    const msg = document.getElementById('togQAed').checked ? 'No videos found' : 'No pending videos — toggle above to show QA\'d';
+    const showQAed = document.getElementById('togQAed').checked;
+    const msg = showQAed
+      ? 'No videos found'
+      : 'No pending videos — enable "Show already QA\'d" above to see reviewed videos';
     list.innerHTML=`<div class="list-empty">${msg}</div>`; return;
   }
   list.innerHTML=filtered.map((v,i)=>{
@@ -1464,7 +1470,7 @@ function renderMeta(v) {
   const dot=
     (eff==='Approved'||eff==='verified')?'var(--green)':
     (eff==='Rejected'||eff==='rejected')?'var(--red)':
-     eff==='done'?'var(--yellow)':'var(--text3)';
+     eff==='done'?'var(--accent2)':'var(--text3)';
   const syncNote=inQ?`<div style="margin-top:5px;font-size:11px;color:var(--yellow)">⏳ Pending sync</div>`
     :lr?`<div style="margin-top:5px;font-size:11px;color:var(--green)">✓ Synced</div>`:'';
   const qcDisp=v.qa_status||v.qc_status||'—';
@@ -1503,10 +1509,10 @@ function goPrev() { if(currentIdx>0)                  loadVideoAt(currentIdx-1);
 function goNext() { if(currentIdx<filtered.length-1)  loadVideoAt(currentIdx+1); }
 
 // ─────────────────────────────────────────────
-//  ACTION  (with toggle/deselect)
+//  ACTION
 // ─────────────────────────────────────────────
 function toggleAction(type) {
-  if (currentAction === type) { clearAction(); return; }  // DESELECT
+  if (currentAction === type) { clearAction(); return; }
   currentAction = type;
   document.getElementById('btnApprove').classList.toggle('sel', type==='Approved');
   document.getElementById('btnReject').classList.toggle('sel',  type==='Rejected');
@@ -1539,7 +1545,7 @@ function toggleReason(btn, r) {
 }
 
 // ─────────────────────────────────────────────
-//  SUBMIT  (fast: fire-and-forget POST)
+//  SUBMIT
 // ─────────────────────────────────────────────
 async function submitReview() {
   if (currentIdx<0||!currentAction) return;
@@ -1551,17 +1557,14 @@ async function submitReview() {
   }
   const payload={video_id:v.video_id,action:currentAction,comment,reviewer:reviewer.email,timestamp:new Date().toISOString()};
 
-  // 1. Save locally immediately
   localReviews[v.video_id]=payload;
   lsSet('qa_local_reviews',localReviews);
 
-  // 2. Update UI immediately (no waiting)
   updateListItemBadge(currentIdx, currentAction, true);
   updateStats(); updateBatchPill();
   renderMeta(v);
   toast(`${currentAction} saved ✓`,'success');
 
-  // 3. Fire-and-forget POST (no await blocking UI)
   postToSheet(payload).then(ok=>{
     if (!ok) {
       if (!submitQueue.some(q=>q.video_id===v.video_id)) {
@@ -1575,7 +1578,6 @@ async function submitReview() {
     }
   });
 
-  // 4. Auto-advance immediately
   const next=findNextPending(currentIdx);
   if (next!==-1) loadVideoAt(next);
   else if (currentIdx<filtered.length-1) goNext();
@@ -1586,9 +1588,6 @@ function findNextPending(from) {
   return -1;
 }
 
-// ─────────────────────────────────────────────
-//  POST  (fire-and-forget capable)
-// ─────────────────────────────────────────────
 async function postToSheet(payload) {
   try {
     await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
@@ -1618,17 +1617,16 @@ function updateListItemBadge(idx,action,isLocal) {
 }
 
 // ─────────────────────────────────────────────
-//  STATS  (in filter sidebar top)
+//  STATS
 // ─────────────────────────────────────────────
 function updateStats() {
-  const total  = videos.length;
-  const pending= filtered.filter(v=>!isQAed(v)).length;
-  const approved=Object.values(localReviews).filter(r=>r.action==='Approved').length;
-  const rejected=Object.values(localReviews).filter(r=>r.action==='Rejected').length;
-  const qad    = Object.keys(localReviews).length;
+  const total   = videos.length;
+  const pending = videos.filter(v=>!isQAed(v)).length;
+  const approved= Object.values(localReviews).filter(r=>r.action==='Approved').length;
+  const rejected= Object.values(localReviews).filter(r=>r.action==='Rejected').length;
   document.getElementById('statsRow').innerHTML=`
-    <span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:11px;background:rgba(255,255,255,.06);color:var(--text2);">${total} batch</span>
-    <span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:11px;background:rgba(245,158,11,.1);color:var(--yellow);">${pending} pending</span>
+    <span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:11px;background:rgba(255,255,255,.06);color:var(--text2);">${total} total</span>
+    <span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:11px;background:rgba(59,130,246,.1);color:var(--accent2);">${pending} pending</span>
     <span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:11px;background:rgba(34,197,94,.1);color:var(--green);">${approved} ✓</span>
     <span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:11px;background:rgba(239,68,68,.1);color:var(--red);">${rejected} ✗</span>`;
 }
@@ -1646,7 +1644,7 @@ function showPage(page) {
 }
 
 // ─────────────────────────────────────────────
-//  SUMMARY
+//  SUMMARY — FIX 2: jumpTo properly navigates
 // ─────────────────────────────────────────────
 function populateSumFilters() {
   const ents=[...new Set(allVideos.map(v=>v.enterprise).filter(Boolean))].sort();
@@ -1691,6 +1689,7 @@ function renderSummary() {
         :`<span class="vbadge b-rejected" style="display:inline-block">✗ Rejected</span>`;
       const ts=lr.timestamp?new Date(lr.timestamp).toLocaleString():'—';
       const q=submitQueue.some(q=>q.video_id===lr.video_id)?`<span style="font-size:10px;color:var(--yellow)">⏳</span>`:'';
+      // FIX 2: jump button uses onclick, ensure togQAed is enabled and video is found
       return `<tr>
         <td class="mono">${escH(lr.video_id)}${q}</td>
         <td>${escH(v.enterprise||'—')}</td>
@@ -1699,19 +1698,51 @@ function renderSummary() {
         <td>${escH(lr.reviewer||'—')}</td>
         <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escH(lr.comment||'—')}</td>
         <td style="white-space:nowrap;">${ts}</td>
-        <td><button class="jmp" onclick="jumpTo('${escH(lr.video_id)}')">↗</button></td>
+        <td><button class="jmp" onclick="jumpTo('${escH(lr.video_id)}')">↗ Review</button></td>
       </tr>`;
     }).join('');
 }
+
+// FIX 2: jumpTo — enable "show QA'd" toggle first, then navigate
 function jumpTo(vid) {
-  document.getElementById('togQAed').checked=true;
-  showPage('review'); clearFilters();
-  setTimeout(()=>{
-    const i=filtered.findIndex(v=>v.video_id===vid);
-    if(i>=0)loadVideoAt(i);
-    else{document.getElementById('fVid').value=vid;applyFilter();}
-  },100);
+  // Enable toggle so QA'd video is visible
+  document.getElementById('togQAed').checked = true;
+
+  // Switch to review page
+  showPage('review');
+
+  // Need to re-apply filter with togQAed=true, then find the video
+  applyFilter();
+
+  // Try to find by current filtered list first
+  let i = filtered.findIndex(v => v.video_id === vid);
+  if (i >= 0) {
+    loadVideoAt(i);
+    return;
+  }
+
+  // If not found in current videos, load enterprise for this video
+  const targetVid = allVideos.find(v => v.video_id === vid);
+  if (targetVid) {
+    // Make sure videos array includes it
+    if (!videos.find(v => v.video_id === vid)) {
+      const ent = targetVid.enterprise;
+      videos = ent ? allVideos.filter(v => v.enterprise === ent) : allVideos;
+      populateSidebarFilters();
+    }
+    applyFilter();
+    i = filtered.findIndex(v => v.video_id === vid);
+    if (i >= 0) { loadVideoAt(i); return; }
+  }
+
+  // Fallback: search by video ID
+  document.getElementById('fVid').value = vid;
+  applyFilter();
+  i = filtered.findIndex(v => v.video_id === vid);
+  if (i >= 0) loadVideoAt(i);
+  else toast('Video not found in current batch — load its enterprise first', 'warn');
 }
+
 function exportCSV() {
   const rows=getSumData();
   if(!rows.length){toast('No data to export','warn');return;}
@@ -1726,7 +1757,7 @@ function exportCSV() {
 }
 
 // ─────────────────────────────────────────────
-//  SETTINGS PANEL
+//  SETTINGS
 // ─────────────────────────────────────────────
 function showSettings()        { document.getElementById('settingsOverlay').classList.add('open'); loadCfgInputs(); }
 function closeSettingsPanel()  { document.getElementById('settingsOverlay').classList.remove('open'); }
