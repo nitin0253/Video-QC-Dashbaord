@@ -1154,7 +1154,7 @@ async function loadAllData() {
         qa_claimed_by:r['qa_claimed_by']||'',
         qa_claimed_at:r['qa_claimed_at']||'',
       };
-    }).filter(v=>v.video_id && v.url && v.url.startsWith('http'));
+    }).filter(v => v.video_id && v.url);
     buildEntList();
   } catch(e) {
     toast('Failed to load sheet data','error');
