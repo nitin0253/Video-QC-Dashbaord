@@ -699,6 +699,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
       <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
         <button class="link-btn" onclick="buildEntList()">↻ Refresh counts</button>
         <button class="link-btn" onclick="resetLocalCache()" style="color:var(--yellow);">⚠ Reset local cache</button>
+        <button class="link-btn" onclick="runDiagnostics()" style="color:var(--purple);">🔍 Run diagnostics</button>
         <span id="entDebug" style="font-size:10px;color:var(--text3);font-family:var(--mono);"></span>
       </div>
       <button class="btn-outline" onclick="claimBatch(null)">Load All Pending →</button>
@@ -1215,18 +1216,38 @@ function lockOwner(v) {
 // ─────────────────────────────────────────────
 //  LOAD DATA — live from Apps Script (real-time)
 // ─────────────────────────────────────────────
+let lastLoadError = null;
 async function loadAllData() {
   const btn = document.getElementById('refreshBtn');
   btn.classList.add('spinning');
   const entBtn = document.getElementById('entSyncBtn');
   if (entBtn) entBtn.classList.add('spinning');
+  lastLoadError = null;
   try {
     // Fetch live data from Apps Script (bypasses Google's published-CSV cache)
     const url = GAS_URL + (GAS_URL.includes('?') ? '&' : '?') + 'action=list&_t=' + Date.now();
-    const res = await fetch(url, { method: 'GET', redirect: 'follow' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    if (!json.ok) throw new Error(json.error || 'list failed');
+    let res;
+    try {
+      res = await fetch(url, { method: 'GET', redirect: 'follow' });
+    } catch (netErr) {
+      lastLoadError = 'Network error: ' + netErr.message + ' — likely CORS or connection block';
+      throw netErr;
+    }
+    if (!res.ok) {
+      lastLoadError = 'HTTP ' + res.status + ' from Apps Script';
+      throw new Error(lastLoadError);
+    }
+    let json;
+    try {
+      json = await res.json();
+    } catch (jsonErr) {
+      lastLoadError = 'Bad response (not JSON) — Apps Script likely returned an HTML error page';
+      throw jsonErr;
+    }
+    if (!json.ok) {
+      lastLoadError = 'Server error: ' + (json.error || 'unknown');
+      throw new Error(lastLoadError);
+    }
 
     const rows = json.rows || [];
     allVideos = rows.map(r => {
@@ -1255,16 +1276,18 @@ async function loadAllData() {
       };
     }).filter(v => v.video_id && v.url);
 
-    // Auto-prune local cache: drop localReviews entries for videos that
-    // (a) the server has marked done, or (b) no longer appear on the sheet.
-    // This prevents stale local state from making every video look "QA'd"
-    // forever in this browser.
+    // Auto-prune stale local cache (see note in pruneLocalReviews)
     pruneLocalReviews();
 
     return true;
   } catch(e) {
-    console.error('loadAllData failed:', e);
-    toast('Failed to load live data — check Apps Script deployment', 'error');
+    console.error('[loadAllData] FAILED:', e, lastLoadError);
+    // Show a longer-lasting visible error
+    const msg = lastLoadError || e.message || 'Failed to load live data';
+    toast(msg, 'error');
+    // Also bake into the debug line so it's visible after the toast disappears
+    const dbg = document.getElementById('entDebug');
+    if (dbg) dbg.textContent = '[error] ' + msg;
     return false;
   } finally {
     btn.classList.remove('spinning');
@@ -1448,6 +1471,84 @@ function resetLocalCache() {
   updateQueueBadge();
   toast('Local cache cleared — refreshing data','info');
   loadAllData().then(() => buildEntList());
+}
+
+// Diagnostic tool — opens a popup with detailed connection info
+async function runDiagnostics() {
+  const lines = [];
+  const log = (s) => { lines.push(s); console.log('[diag]', s); };
+
+  log('=== QA Dashboard Diagnostics ===');
+  log('Time: ' + new Date().toISOString());
+  log('Origin: ' + window.location.origin + ' (protocol: ' + window.location.protocol + ')');
+  log('Reviewer: ' + (reviewer.email || '(none)'));
+  log('GAS_URL: ' + GAS_URL);
+  log('');
+  log('--- Test 1: GET ?action=list ---');
+  const url = GAS_URL + (GAS_URL.includes('?') ? '&' : '?') + 'action=list&_t=' + Date.now();
+  try {
+    const t0 = Date.now();
+    const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+    const ms = Date.now() - t0;
+    log('  HTTP ' + res.status + ' (' + ms + 'ms)');
+    log('  Content-Type: ' + (res.headers.get('content-type') || '(none)'));
+    const text = await res.text();
+    log('  Body length: ' + text.length + ' bytes');
+    log('  First 300 chars: ' + text.slice(0, 300));
+    try {
+      const json = JSON.parse(text);
+      log('  JSON ok: ' + json.ok + ', rows: ' + (json.rows ? json.rows.length : '(no rows field)'));
+      if (json.rows && json.rows.length > 0) {
+        log('  Sample row keys: ' + Object.keys(json.rows[0]).join(', '));
+        log('  Sample qa_status: "' + json.rows[0].qa_status + '"');
+        log('  Sample qa_state:  "' + json.rows[0].qa_state + '"');
+        log('  Sample qa_claimed_by: "' + json.rows[0].qa_claimed_by + '"');
+      }
+    } catch (e) {
+      log('  ✗ JSON parse failed: ' + e.message);
+    }
+  } catch (e) {
+    log('  ✗ Fetch failed: ' + e.message);
+    log('  This is most likely a CORS or network issue.');
+    if (window.location.protocol === 'file:') {
+      log('  ⚠ You are running from file:// — CORS often blocks fetch responses');
+      log('     from this protocol. Serve via http(s):// instead.');
+    }
+  }
+
+  log('');
+  log('--- Test 2: local state ---');
+  log('  allVideos.length: ' + allVideos.length);
+  log('  localReviews: ' + Object.keys(localReviews).length + ' entries');
+  log('  submitQueue: ' + submitQueue.length);
+  log('  claimedIds: ' + claimedIds.size);
+
+  if (allVideos.length > 0) {
+    const pending = allVideos.filter(v => !isQAed(v) && !isLockedByOther(v));
+    const done = allVideos.filter(v => isQAed(v));
+    const locked = allVideos.filter(v => isLockedByOther(v));
+    log('  pending: ' + pending.length + ', done: ' + done.length + ', locked: ' + locked.length);
+    log('  Sample first row:');
+    log('    video_id="' + allVideos[0].video_id + '"');
+    log('    enterprise="' + allVideos[0].enterprise + '"');
+    log('    qa_status="' + allVideos[0].qa_status + '"');
+    log('    qa_state="' + allVideos[0].qa_state + '"');
+    log('    qa_claimed_by="' + allVideos[0].qa_claimed_by + '"');
+    log('    isQAed=' + isQAed(allVideos[0]) + ', isLockedByOther=' + isLockedByOther(allVideos[0]));
+    log('    in localReviews? ' + (allVideos[0].video_id in localReviews));
+  }
+
+  // Show in a popup-style div
+  const txt = lines.join('\n');
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if (w) {
+    w.document.body.style.cssText = 'font-family:monospace;white-space:pre;padding:20px;background:#1a1d21;color:#e8ecf0;';
+    w.document.body.textContent = txt;
+  } else {
+    // Popup blocked — fallback to alert (truncated)
+    alert(txt.slice(0, 2000) + (txt.length > 2000 ? '\n\n...(truncated, see console)' : ''));
+    console.log(txt);
+  }
 }
 
 function renderEntList() {
