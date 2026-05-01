@@ -696,7 +696,11 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
     </div>
     <div class="ent-list" id="entList"><div style="padding:20px;text-align:center;color:var(--text3);">Loading…</div></div>
     <div class="ent-footer">
-      <button class="link-btn" onclick="buildEntList()">↻ Refresh counts</button>
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+        <button class="link-btn" onclick="buildEntList()">↻ Refresh counts</button>
+        <button class="link-btn" onclick="resetLocalCache()" style="color:var(--yellow);">⚠ Reset local cache</button>
+        <span id="entDebug" style="font-size:10px;color:var(--text3);font-family:var(--mono);"></span>
+      </div>
       <button class="btn-outline" onclick="claimBatch(null)">Load All Pending →</button>
     </div>
   </div>
@@ -1251,6 +1255,12 @@ async function loadAllData() {
       };
     }).filter(v => v.video_id && v.url);
 
+    // Auto-prune local cache: drop localReviews entries for videos that
+    // (a) the server has marked done, or (b) no longer appear on the sheet.
+    // This prevents stale local state from making every video look "QA'd"
+    // forever in this browser.
+    pruneLocalReviews();
+
     return true;
   } catch(e) {
     console.error('loadAllData failed:', e);
@@ -1259,6 +1269,34 @@ async function loadAllData() {
   } finally {
     btn.classList.remove('spinning');
     if (entBtn) entBtn.classList.remove('spinning');
+  }
+}
+
+function pruneLocalReviews() {
+  if (!Object.keys(localReviews).length) return;
+  const sheetVids = new Map();
+  allVideos.forEach(v => sheetVids.set(v.video_id, v));
+  const queuedIds = new Set(submitQueue.map(q => q.video_id));
+  let dropped = 0;
+  Object.keys(localReviews).forEach(vid => {
+    const v = sheetVids.get(vid);
+    if (!v) return; // Not in current sheet snapshot — keep
+    const serverDone = (v.qa_state === 'done') || (v.qa_status && v.qa_status.trim());
+    const queued = queuedIds.has(vid);
+    if (serverDone) {
+      // Server has it: cache is redundant, drop it
+      delete localReviews[vid];
+      dropped++;
+    } else if (!queued) {
+      // Server doesn't have it, and it's not queued for retry → cache is stale
+      // (likely from an old testing session). Drop so user can re-QA if needed.
+      delete localReviews[vid];
+      dropped++;
+    }
+  });
+  if (dropped > 0) {
+    lsSet('qa_local_reviews', localReviews);
+    console.log('[prune] removed', dropped, 'stale local review entries');
   }
 }
 
@@ -1385,7 +1423,31 @@ function isQAed(v) {
 function buildEntList() {
   const myPending = allVideos.filter(v => !isQAed(v) && !isLockedByOther(v));
   document.getElementById('entTotal').textContent = myPending.length + ' available';
+
+  // Diagnostic line: show what the dashboard is seeing
+  const totalRows = allVideos.length;
+  const lockedByOthers = allVideos.filter(v => isLockedByOther(v)).length;
+  const serverDone = allVideos.filter(v =>
+    (v.qa_state === 'done') || (v.qa_status && v.qa_status.trim())
+  ).length;
+  const localOnly = Object.keys(localReviews).length;
+  const dbg = document.getElementById('entDebug');
+  if (dbg) {
+    dbg.textContent = `[debug] sheet=${totalRows} · server-done=${serverDone} · in-progress-by-others=${lockedByOthers} · local-cache=${localOnly}`;
+  }
+
   renderEntList();
+}
+
+function resetLocalCache() {
+  if (!confirm('Clear local QA cache?\n\nThis removes any locally-saved review state in this browser. Sheet data is unaffected. Use this if the dashboard wrongly thinks videos are already QA\'d.')) return;
+  localReviews = {};
+  submitQueue = [];
+  localStorage.removeItem('qa_local_reviews');
+  localStorage.removeItem('qa_submit_queue');
+  updateQueueBadge();
+  toast('Local cache cleared — refreshing data','info');
+  loadAllData().then(() => buildEntList());
 }
 
 function renderEntList() {
@@ -1757,7 +1819,7 @@ function renderMeta(v) {
     :lr?`<div style="margin-top:5px;font-size:11px;color:var(--green)">✓ Synced</div>`:'';
   const qcDisp=v.qa_status||v.qc_status||'—';
   const owner = lockOwner(v);
-  const ownerNote = owner && owner.toLowerCase() === reviewer.email.toLowerCase()
+  const ownerNote = owner && reviewer.email && owner.toLowerCase() === reviewer.email.toLowerCase()
     ? `<div style="margin-top:5px;font-size:11px;color:var(--accent2)">🔒 Claimed by you</div>`
     : '';
   document.getElementById('metaPane').innerHTML=`
