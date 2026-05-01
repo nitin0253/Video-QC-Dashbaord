@@ -93,13 +93,32 @@ body{
 /* ── ENTERPRISE PICKER ── */
 .ent-card{
   background:var(--surface);border:1px solid var(--border2);
-  border-radius:18px;padding:28px 32px;width:580px;max-width:95vw;
+  border-radius:18px;padding:24px 28px;width:640px;max-width:95vw;
   box-shadow:0 24px 60px rgba(0,0,0,.5);
-  display:flex;flex-direction:column;gap:14px;
+  display:flex;flex-direction:column;gap:13px;
   max-height:90vh;
 }
-.ent-card h2{font-size:18px;font-weight:600;}
-.ent-card .sub{font-size:12px;color:var(--text2);}
+.ent-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.ent-head h2{font-size:18px;font-weight:600;}
+.ent-head .sub{font-size:12px;color:var(--text2);margin-top:2px;}
+.ent-head-actions{display:flex;gap:6px;flex-shrink:0;}
+.ent-head-btn{
+  padding:7px 12px;border-radius:8px;border:1px solid var(--border2);
+  background:var(--surface2);color:var(--text2);font-size:12px;cursor:pointer;
+  display:flex;align-items:center;gap:5px;transition:all .15s;
+  font-family:var(--font-body);
+}
+.ent-head-btn:hover{border-color:var(--accent);color:var(--accent);}
+.ent-head-btn.danger:hover{border-color:var(--red);color:var(--red);}
+.ent-head-btn.spinning .ico{animation:spin .8s linear infinite;display:inline-block;}
+.ent-search-row{display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.ent-search{
+  flex:1;padding:9px 13px;border-radius:9px;
+  border:1px solid var(--border2);background:var(--surface2);
+  color:var(--text);font-size:13px;font-family:var(--font-body);
+  outline:none;transition:border .15s;
+}
+.ent-search:focus{border-color:var(--accent);}
 .ent-total{
   display:flex;align-items:center;justify-content:space-between;
   padding:11px 16px;background:rgba(59,130,246,.08);
@@ -111,7 +130,7 @@ body{
 .ent-list{
   display:flex;flex-direction:column;gap:7px;
   overflow-y:auto;flex:1;padding-right:4px;
-  min-height:0;
+  min-height:200px;
 }
 .ent-list::-webkit-scrollbar{width:3px;}
 .ent-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
@@ -128,6 +147,7 @@ body{
 .pill{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:14px;font-weight:600;white-space:nowrap;}
 .pill-pending{background:rgba(59,130,246,.1);color:var(--accent2);}
 .pill-done   {background:rgba(34,197,94,.1); color:var(--green);}
+.pill-locked {background:rgba(245,158,11,.1);color:var(--yellow);}
 .claim-btn{
   padding:6px 14px;background:var(--accent);color:#fff;
   border:none;border-radius:7px;font-size:12px;font-weight:600;
@@ -485,7 +505,6 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
   display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s;
 }
 .close-btn:hover{border-color:var(--accent);color:var(--accent);}
-/* FIX 4: settings scroll is flex:1 + overflow-y:auto so it scrolls properly */
 .settings-scroll{
   flex:1;overflow-y:auto;padding:16px;
   display:flex;flex-direction:column;gap:12px;
@@ -637,7 +656,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
 </head>
 <body>
 
-<!-- ══════════ LOGIN ══════════ -->
+<!-- ══════════ LOGIN — email + name only, no password ══════════ -->
 <div class="screen" id="loginScreen">
   <div class="app-logo">⬡ QA REVIEW SYSTEM</div>
   <div class="login-card">
@@ -651,16 +670,28 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
 </div>
 
 <!-- ══════════ ENTERPRISE PICKER ══════════ -->
-<!-- FIX 1: Removed batch input. Simple enterprise list with counts. "Load All Pending" loads everything -->
 <div class="screen hidden" id="entScreen">
   <div class="app-logo">⬡ QA REVIEW SYSTEM</div>
   <div class="ent-card">
-    <div>
-      <h2>Select Enterprise</h2>
-      <p class="sub">Click "Start QA" on any enterprise to begin reviewing, or load all pending videos at once.</p>
+    <div class="ent-head">
+      <div>
+        <h2>Select Enterprise</h2>
+        <p class="sub">Click "Start QA" on any enterprise to begin reviewing.</p>
+      </div>
+      <div class="ent-head-actions">
+        <button class="ent-head-btn" id="entSyncBtn" onclick="entSync()" title="Sync data from sheet">
+          <span class="ico">↻</span> Sync
+        </button>
+        <button class="ent-head-btn danger" onclick="logout()" title="Logout">
+          <span class="ico">⏻</span> Logout
+        </button>
+      </div>
+    </div>
+    <div class="ent-search-row">
+      <input class="ent-search" id="entSearch" placeholder="🔍 Search enterprises by name…" oninput="renderEntList()" autocomplete="off"/>
     </div>
     <div class="ent-total">
-      <span class="lbl">Total pending QA across all enterprises</span>
+      <span class="lbl">Total available pending QA</span>
       <span class="num" id="entTotal">—</span>
     </div>
     <div class="ent-list" id="entList"><div style="padding:20px;text-align:center;color:var(--text3);">Loading…</div></div>
@@ -697,7 +728,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
         <div class="rev-name" id="revName">—</div>
       </div>
       <div class="sidebar-divider"></div>
-      <button class="snav-item" onclick="showSettings()">
+      <button class="snav-item" id="snav-settings" onclick="showSettings()" style="display:none;">
         <span class="sico">⚙</span><span class="snav-label">Settings</span>
       </button>
       <button class="snav-item" onclick="showEntScreen()">
@@ -721,7 +752,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
       <div class="header-right">
         <span class="batch-pill" id="batchPill" style="display:none" onclick="showEntScreen()">— batch</span>
         <div class="queue-badge synced" id="queueBadge" onclick="flushQueue()">✓ Synced</div>
-        <button class="icon-btn spinning" id="refreshBtn" onclick="reloadData()" title="Refresh" style="display:none">↻</button>
+        <button class="icon-btn" id="refreshBtn" onclick="reloadData()" title="Sync data from sheet">↻</button>
       </div>
     </div>
 
@@ -758,14 +789,13 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
           </div>
         </div>
 
-        <!-- FIX 5: Toggle row — show already QA'd -->
         <div class="toggle-row">
           <label>
             <label class="tog">
               <input type="checkbox" id="togQAed" onchange="applyFilter()"/>
               <span class="tog-slider"></span>
             </label>
-            Show already QA'd
+            Show only QA'd videos
           </label>
         </div>
 
@@ -863,14 +893,13 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
   </div>
 </div>
 
-<!-- ══════════ SETTINGS SLIDE-IN ══════════ -->
+<!-- ══════════ SETTINGS SLIDE-IN (admin only) ══════════ -->
 <div class="settings-overlay" id="settingsOverlay" onclick="closeSettings(event)">
   <div class="settings-panel" onclick="event.stopPropagation()">
     <div class="settings-panel-header">
       <h3>⚙ Settings</h3>
       <button class="close-btn" onclick="closeSettingsPanel()">✕</button>
     </div>
-    <!-- FIX 4: settings-scroll properly scrollable -->
     <div class="settings-scroll">
 
       <div class="s-section">
@@ -975,8 +1004,9 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
 //  CONFIG
 // ─────────────────────────────────────────────
 let SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&single=true&output=csv";
-let GAS_URL   = "https://script.google.com/macros/s/AKfycbzqgbmMLIuCz4j6HgFsVgEp4t2ykTsCpNCth2OlSIgIMbU6_SePL4fIHYEqogDGLxs/exec";
+let GAS_URL   = "https://script.google.com/macros/s/AKfycbwmy9mVOBSOIj-_-4Dg37uE0-b83qUBhixxwQxkwcNdAJR89nqB7utRRqXEkpMm07n5/exec";
 const CLAIM_TTL_MIN = 120;
+const ADMIN_EMAIL = "nitin.kumar@spyne.ai";
 
 const FONTS = [
   {k:'geist',       lbl:'Geist',         fam:"'Geist',sans-serif",          prev:'Aa Bb 123'},
@@ -1041,9 +1071,15 @@ function init() {
 const ls = k => localStorage.getItem(k);
 const lsSet = (k,v) => localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
 
+function isAdmin() {
+  return reviewer.email && reviewer.email.toLowerCase() === ADMIN_EMAIL;
+}
+
 function setReviewer() {
   document.getElementById('revName').textContent  = reviewer.name;
   document.getElementById('revAvatar').textContent= reviewer.name.charAt(0).toUpperCase();
+  // Show Settings only for the admin email
+  document.getElementById('snav-settings').style.display = isAdmin() ? '' : 'none';
 }
 function showScreen(id) {
   ['loginScreen','entScreen'].forEach(s => {
@@ -1064,13 +1100,14 @@ function toggleSidebar() {
 }
 
 // ─────────────────────────────────────────────
-//  LOGIN
+//  LOGIN — email + name only
 // ─────────────────────────────────────────────
 function doLogin() {
   const name  = document.getElementById('loginName').value.trim();
-  const email = document.getElementById('loginEmail').value.trim();
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
   if (!name || !email) { toast('Enter name and email','error'); return; }
-  reviewer = {name,email};
+  if (!email.includes('@')) { toast('Enter a valid email','error'); return; }
+  reviewer = {name, email};
   lsSet('qa_reviewer', reviewer);
   setReviewer();
   showScreen('entScreen');
@@ -1098,7 +1135,15 @@ function acceptHint() {
 }
 document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginName').focus();});
 document.getElementById('loginName').addEventListener('keydown', e=>{if(e.key==='Enter')doLogin();});
-function logout() { localStorage.removeItem('qa_reviewer'); location.reload(); }
+function logout() {
+  // Release any claimed videos so others can pick them up
+  if (claimedIds.size > 0 && reviewer.email) {
+    postToSheet({action:'release', video_ids:[...claimedIds], reviewer:reviewer.email, timestamp:new Date().toISOString()});
+  }
+  localStorage.removeItem('qa_reviewer');
+  localStorage.removeItem('qa_claimed_ids');
+  location.reload();
+}
 
 // ─────────────────────────────────────────────
 //  CSV
@@ -1124,11 +1169,31 @@ function parseCSV(text) {
 }
 
 // ─────────────────────────────────────────────
+//  CLAIM HELPERS — multi-user safety
+// ─────────────────────────────────────────────
+function isLockedByOther(v) {
+  const claimedBy = (v.qa_claimed_by || '').trim().toLowerCase();
+  if (!claimedBy) return false;
+  if (claimedBy === reviewer.email.toLowerCase()) return false;
+  const claimedAt = v.qa_claimed_at;
+  if (!claimedAt) return false;
+  const t = new Date(claimedAt);
+  if (isNaN(t)) return false;
+  const ageMin = (Date.now() - t.getTime()) / 60000;
+  return ageMin < CLAIM_TTL_MIN;
+}
+function lockOwner(v) {
+  return (v.qa_claimed_by || '').trim();
+}
+
+// ─────────────────────────────────────────────
 //  LOAD DATA
 // ─────────────────────────────────────────────
 async function loadAllData() {
   const btn = document.getElementById('refreshBtn');
-  btn.style.display='flex'; btn.classList.add('spinning');
+  btn.classList.add('spinning');
+  const entBtn = document.getElementById('entSyncBtn');
+  if (entBtn) entBtn.classList.add('spinning');
   try {
     const res  = await fetch(SHEET_URL+'&_t='+Date.now());
     const text = await res.text();
@@ -1162,7 +1227,7 @@ async function loadAllData() {
     console.error(e);
   } finally {
     btn.classList.remove('spinning');
-    btn.style.display='none';
+    if (entBtn) entBtn.classList.remove('spinning');
   }
 }
 
@@ -1170,6 +1235,12 @@ function reloadData() {
   loadAllData().then(()=>{
     applyBatch();
     toast(`✓ ${allVideos.length} videos refreshed`,'success');
+  });
+}
+
+function entSync() {
+  loadAllData().then(()=>{
+    toast(`✓ Synced — ${allVideos.length} videos loaded`,'success');
   });
 }
 
@@ -1181,71 +1252,113 @@ function isQAed(v) {
 }
 
 // ─────────────────────────────────────────────
-//  FIX 1: ENTERPRISE PICKER — no batch size, simple counts
+//  ENTERPRISE PICKER
 // ─────────────────────────────────────────────
 function buildEntList() {
-  const pending = allVideos.filter(v=>!isQAed(v));
-  document.getElementById('entTotal').textContent = pending.length + ' pending';
+  const myPending = allVideos.filter(v => !isQAed(v) && !isLockedByOther(v));
+  document.getElementById('entTotal').textContent = myPending.length + ' available';
+  renderEntList();
+}
+
+function renderEntList() {
+  const q = (document.getElementById('entSearch')?.value || '').trim().toLowerCase();
 
   const map = {};
   allVideos.forEach(v=>{
-    const e = v.enterprise||'(Unknown)';
-    if (!map[e]) map[e] = {total:0, pending:0};
+    const e = v.enterprise || '(Unknown)';
+    if (!map[e]) map[e] = {total:0, pending:0, locked:0};
     map[e].total++;
-    if (!isQAed(v)) map[e].pending++;
+    if (isQAed(v)) {
+      // already done — counted only in total
+    } else if (isLockedByOther(v)) {
+      map[e].locked++;
+    } else {
+      map[e].pending++;
+    }
   });
 
-  const ents = Object.entries(map).sort((a,b)=>b[1].pending-a[1].pending);
+  let ents = Object.entries(map);
+  if (q) ents = ents.filter(([name]) => name.toLowerCase().includes(q));
+  ents.sort((a,b)=>b[1].pending - a[1].pending);
 
+  const list = document.getElementById('entList');
   if (!ents.length) {
-    document.getElementById('entList').innerHTML='<div style="padding:20px;text-align:center;color:var(--green);">🎉 All videos QA\'d!</div>';
+    list.innerHTML = q
+      ? `<div style="padding:20px;text-align:center;color:var(--text3);">No enterprises match "${escH(q)}"</div>`
+      : `<div style="padding:20px;text-align:center;color:var(--green);">🎉 All videos QA'd!</div>`;
     return;
   }
-  document.getElementById('entList').innerHTML = ents.map(([name,counts])=>`
+
+  list.innerHTML = ents.map(([name,counts])=>{
+    const lockedHtml = counts.locked > 0
+      ? `<span class="pill pill-locked" title="Locked by other reviewers">${counts.locked} locked</span>`
+      : '';
+    return `
     <div class="ent-row">
       <div>
         <div class="name">${escH(name)}</div>
-        <div class="hint">${counts.total} total videos</div>
+        <div class="hint">${counts.total} total · ${counts.pending} available${counts.locked?' · '+counts.locked+' in progress by others':''}</div>
       </div>
       <div class="ent-row-right">
-        <span class="pill ${counts.pending>0?'pill-pending':'pill-done'}">${counts.pending} pending</span>
-        <button class="claim-btn" onclick="claimBatch('${escH(name)}')" ${counts.pending===0?'disabled':''}>Start QA →</button>
+        ${lockedHtml}
+        <span class="pill ${counts.pending>0?'pill-pending':'pill-done'}">${counts.pending} available</span>
+        <button class="claim-btn" onclick="claimBatch('${escAttr(name)}')" ${counts.pending===0?'disabled':''}>Start QA →</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
-// FIX 1: claimBatch loads ALL videos for the enterprise (no batch limit)
 async function claimBatch(enterprise) {
   curEnterprise = enterprise;
 
-  // Load ALL pending for the selected enterprise (or all if null)
   const pool = allVideos.filter(v=>{
-    if (enterprise && v.enterprise!==enterprise) return false;
-    return true; // include both pending and QA'd so toggle works
+    if (enterprise && v.enterprise !== enterprise) return false;
+    return true;
   });
 
-  // Track the pending ones for claiming
-  const pendingPool = pool.filter(v=>!isQAed(v));
+  const pendingPool = pool.filter(v => !isQAed(v) && !isLockedByOther(v));
+  if (pendingPool.length === 0) {
+    toast('No available videos to claim — try another enterprise', 'warn');
+    return;
+  }
+
   claimedIds = new Set(pendingPool.map(v=>v.video_id));
   lsSet('qa_claimed_ids', [...claimedIds]);
 
-  // Fire-and-forget claim
-  if (pendingPool.length > 0) {
-    postToSheet({action:'claim', video_ids:[...claimedIds], reviewer:reviewer.email, timestamp:new Date().toISOString()});
-  }
+  // Optimistic local lock
+  const nowISO = new Date().toISOString();
+  pendingPool.forEach(v=>{
+    v.qa_claimed_by = reviewer.email;
+    v.qa_claimed_at = nowISO;
+  });
+
+  // Fire-and-forget claim to server
+  postToSheet({action:'claim', video_ids:[...claimedIds], reviewer:reviewer.email, timestamp:nowISO});
 
   hideScreens();
-  // videos = all videos for this enterprise (so toggle can show QA'd ones)
   videos = pool;
   applyFilter();
   populateSidebarFilters();
   populateSumFilters();
   updateStats();
   updateBatchPill();
-  toast(`✓ Loaded ${pool.length} videos${enterprise?' from '+enterprise:''} (${pendingPool.length} pending)`,'success');
+  toast(`✓ Claimed ${pendingPool.length} video${pendingPool.length===1?'':'s'}${enterprise?' from '+enterprise:''}`,'success');
 }
 
-function showEntScreen() { buildEntList(); showScreen('entScreen'); }
+function showEntScreen() {
+  // Auto-release current claims that the user hasn't QA'd yet
+  const unfinished = [...claimedIds].filter(id => !localReviews[id]);
+  if (unfinished.length > 0) {
+    postToSheet({action:'release', video_ids:unfinished, reviewer:reviewer.email, timestamp:new Date().toISOString()});
+  }
+  claimedIds = new Set();
+  lsSet('qa_claimed_ids', []);
+  curEnterprise = null;
+  document.getElementById('batchPill').style.display = 'none';
+
+  buildEntList();
+  showScreen('entScreen');
+}
 
 function updateBatchPill() {
   const p = document.getElementById('batchPill');
@@ -1261,10 +1374,8 @@ function updateBatchPill() {
 // ─────────────────────────────────────────────
 function applyBatch() {
   if (claimedIds.size > 0) {
-    // Get the enterprise from claimed IDs
     const firstClaimed = allVideos.find(v=>claimedIds.has(v.video_id));
     const ent = firstClaimed ? firstClaimed.enterprise : null;
-    // Include ALL videos from that enterprise (for toggle to work)
     videos = ent
       ? allVideos.filter(v=>v.enterprise===ent)
       : allVideos;
@@ -1275,7 +1386,7 @@ function applyBatch() {
 }
 
 // ─────────────────────────────────────────────
-//  FILTERS — FIX 5: Toggle properly controls QA'd display
+//  FILTERS
 // ─────────────────────────────────────────────
 function setDate(el, v) {
   document.querySelectorAll('.date-tab').forEach(t=>t.classList.remove('active'));
@@ -1296,8 +1407,8 @@ function matchDate(v) {
 function populateSidebarFilters() {
   const ents  = [...new Set(videos.map(v=>v.enterprise).filter(Boolean))].sort();
   const users = [...new Set(videos.map(v=>v.qc_user).filter(u=>u&&u.includes('@')))].sort();
-  document.getElementById('fEnt').innerHTML  = '<option value="">All Enterprises</option>'+ents.map(e=>`<option value="${e}">${e}</option>`).join('');
-  document.getElementById('fUser').innerHTML = '<option value="">All QC Users</option>'   +users.map(u=>`<option value="${u}">${u}</option>`).join('');
+  document.getElementById('fEnt').innerHTML  = '<option value="">All Enterprises</option>'+ents.map(e=>`<option value="${escAttr(e)}">${escH(e)}</option>`).join('');
+  document.getElementById('fUser').innerHTML = '<option value="">All QC Users</option>'   +users.map(u=>`<option value="${escAttr(u)}">${escH(u)}</option>`).join('');
 }
 
 function applyFilter(cfObj) {
@@ -1307,13 +1418,18 @@ function applyFilter(cfObj) {
   const vidId  = document.getElementById('fVid').value.trim().toLowerCase();
   const vin    = document.getElementById('fVin').value.trim().toLowerCase();
   const sku    = document.getElementById('fSku').value.trim().toLowerCase();
-  // FIX 5: Read toggle state properly
   const showQA = document.getElementById('togQAed').checked;
   const cf     = cfObj || null;
 
   filtered = videos.filter(v=>{
-    // FIX 5: If showQA is OFF, hide already-QA'd videos. If ON, show all.
-    if (!showQA && isQAed(v)) return false;
+    // Multi-user: hide videos locked by other reviewers
+    if (isLockedByOther(v)) return false;
+    // Toggle: ON = only QA'd; OFF = only pending
+    if (showQA) {
+      if (!isQAed(v)) return false;
+    } else {
+      if (isQAed(v)) return false;
+    }
     if (ent    && v.enterprise!==ent)   return false;
     if (user   && v.qc_user  !==user)   return false;
     if (status && v.status   !==status) return false;
@@ -1338,7 +1454,10 @@ function applyFilter(cfObj) {
   else {
     currentIdx=-1;
     const showQAed = document.getElementById('togQAed').checked;
-    document.getElementById('videoWrap').innerHTML=`<div class="no-vid"><span>${showQAed?'🎉':'▶'}</span>${showQAed?'Nothing to show':'Toggle "Show already QA\'d" to see reviewed videos'}</div>`;
+    const msg = showQAed
+      ? 'No QA\'d videos yet'
+      : '🎉 All caught up — no pending videos';
+    document.getElementById('videoWrap').innerHTML=`<div class="no-vid"><span>${showQAed?'◈':'🎉'}</span>${msg}</div>`;
     document.getElementById('metaPane').innerHTML ='<div class="m-label">Details</div><div style="font-size:12px;color:var(--text3);">No videos match</div>';
     document.getElementById('vidCtr').textContent ='0 / 0';
   }
@@ -1385,8 +1504,8 @@ function renderList() {
   if (!filtered.length) {
     const showQAed = document.getElementById('togQAed').checked;
     const msg = showQAed
-      ? 'No videos found'
-      : 'No pending videos — enable "Show already QA\'d" above to see reviewed videos';
+      ? 'No QA\'d videos yet — toggle off to see pending'
+      : '🎉 No pending videos — toggle on to see your QA history';
     list.innerHTML=`<div class="list-empty">${msg}</div>`; return;
   }
   list.innerHTML=filtered.map((v,i)=>{
@@ -1422,7 +1541,8 @@ function badge(status, isLocal=false, isSheetQA=false) {
   if (s==='done')                     return {c:'b-done',    l:'◉ Done'};
   return {c:'b-pending',l:s};
 }
-const escH = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const escH = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const escAttr = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
 
 // ─────────────────────────────────────────────
 //  LOAD VIDEO
@@ -1448,7 +1568,7 @@ function loadVideoAt(idx) {
   wrap.innerHTML=`
     <div class="load-over" id="lo"><div class="spin"></div></div>
     <video id="player" controls preload="metadata">
-      <source src="${escH(v.url)}" type="video/mp4"/>
+      <source src="${escAttr(v.url)}" type="video/mp4"/>
     </video>`;
   const p=document.getElementById('player');
   p.oncanplay=()=>{ const lo=document.getElementById('lo'); if(lo)lo.remove(); };
@@ -1475,6 +1595,10 @@ function renderMeta(v) {
   const syncNote=inQ?`<div style="margin-top:5px;font-size:11px;color:var(--yellow)">⏳ Pending sync</div>`
     :lr?`<div style="margin-top:5px;font-size:11px;color:var(--green)">✓ Synced</div>`:'';
   const qcDisp=v.qa_status||v.qc_status||'—';
+  const owner = lockOwner(v);
+  const ownerNote = owner && owner.toLowerCase() === reviewer.email.toLowerCase()
+    ? `<div style="margin-top:5px;font-size:11px;color:var(--accent2)">🔒 Claimed by you</div>`
+    : '';
   document.getElementById('metaPane').innerHTML=`
     <div class="m-label">QA Status</div>
     <div class="m-box">
@@ -1482,6 +1606,7 @@ function renderMeta(v) {
       <div class="status-row"><div class="sdot" style="background:${dot}"></div><div class="stext" style="color:${dot}">${escH(eff||'Pending Review')}</div></div>
       ${v.reason?`<div style="margin-top:5px;font-size:11px;color:var(--text3)">Reason: ${escH(v.reason)}</div>`:''}
       ${syncNote}
+      ${ownerNote}
     </div>
     <div class="m-label">QC Status</div>
     <div class="m-box">
@@ -1556,7 +1681,14 @@ async function submitReview() {
     toast('Add a rejection reason','error');
     document.getElementById('comment').focus(); return;
   }
-  const payload={video_id:v.video_id,action:currentAction,comment,reviewer:reviewer.email,timestamp:new Date().toISOString()};
+  const payload={
+    video_id:v.video_id,
+    action:currentAction,
+    comment,
+    reviewer:reviewer.email,
+    reviewer_name:reviewer.name,
+    timestamp:new Date().toISOString()
+  };
 
   localReviews[v.video_id]=payload;
   lsSet('qa_local_reviews',localReviews);
@@ -1622,9 +1754,10 @@ function updateListItemBadge(idx,action,isLocal) {
 // ─────────────────────────────────────────────
 function updateStats() {
   const total   = videos.length;
-  const pending = videos.filter(v=>!isQAed(v)).length;
-  const approved= Object.values(localReviews).filter(r=>r.action==='Approved').length;
-  const rejected= Object.values(localReviews).filter(r=>r.action==='Rejected').length;
+  const pending = videos.filter(v=>!isQAed(v) && !isLockedByOther(v)).length;
+  const myReviews = Object.values(localReviews).filter(r=>r.reviewer===reviewer.email);
+  const approved= myReviews.filter(r=>r.action==='Approved').length;
+  const rejected= myReviews.filter(r=>r.action==='Rejected').length;
   document.getElementById('statsRow').innerHTML=`
     <span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:11px;background:rgba(255,255,255,.06);color:var(--text2);">${total} total</span>
     <span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:11px;background:rgba(59,130,246,.1);color:var(--accent2);">${pending} pending</span>
@@ -1645,13 +1778,16 @@ function showPage(page) {
 }
 
 // ─────────────────────────────────────────────
-//  SUMMARY — FIX 2: jumpTo properly navigates
+//  SUMMARY
 // ─────────────────────────────────────────────
 function populateSumFilters() {
   const ents=[...new Set(allVideos.map(v=>v.enterprise).filter(Boolean))].sort();
-  const revs=[...new Set(Object.values(localReviews).map(r=>r.reviewer).filter(Boolean))].sort();
-  document.getElementById('sumEnt').innerHTML='<option value="">All Enterprises</option>'+ents.map(e=>`<option value="${e}">${e}</option>`).join('');
-  document.getElementById('sumRev').innerHTML='<option value="">All Reviewers</option>'  +revs.map(r=>`<option value="${r}">${r}</option>`).join('');
+  const reviewSet = isAdmin()
+    ? Object.values(localReviews)
+    : Object.values(localReviews).filter(r=>r.reviewer===reviewer.email);
+  const revs=[...new Set(reviewSet.map(r=>r.reviewer).filter(Boolean))].sort();
+  document.getElementById('sumEnt').innerHTML='<option value="">All Enterprises</option>'+ents.map(e=>`<option value="${escAttr(e)}">${escH(e)}</option>`).join('');
+  document.getElementById('sumRev').innerHTML='<option value="">All Reviewers</option>'  +revs.map(r=>`<option value="${escAttr(r)}">${escH(r)}</option>`).join('');
 }
 function getSumData() {
   const ent=document.getElementById('sumEnt').value;
@@ -1659,7 +1795,10 @@ function getSumData() {
   const act=document.getElementById('sumAct').value;
   const fr =document.getElementById('sumFrom').value;
   const to =document.getElementById('sumTo').value;
-  return Object.values(localReviews).filter(lr=>{
+  let pool = Object.values(localReviews);
+  // Non-admin sees only their own reviews
+  if (!isAdmin()) pool = pool.filter(r=>r.reviewer===reviewer.email);
+  return pool.filter(lr=>{
     const v=allVideos.find(v=>v.video_id===lr.video_id)||{};
     if(ent&&v.enterprise!==ent)  return false;
     if(rev&&lr.reviewer !==rev)  return false;
@@ -1675,7 +1814,7 @@ function renderSummary() {
   const rej=rows.filter(r=>r.action==='Rejected').length;
   const rate=rows.length?Math.round(app/rows.length*100):0;
   document.getElementById('kpiGrid').innerHTML=`
-    <div class="kpi"><div class="klbl">Total QA'd</div><div class="kval" style="color:var(--accent2)">${rows.length}</div><div class="ksub">All reviewed</div></div>
+    <div class="kpi"><div class="klbl">Total QA'd</div><div class="kval" style="color:var(--accent2)">${rows.length}</div><div class="ksub">${isAdmin()?'All reviewers':'Your reviews'}</div></div>
     <div class="kpi"><div class="klbl">Approved</div><div class="kval" style="color:var(--green)">${app}</div><div class="ksub">${rate}% rate</div></div>
     <div class="kpi"><div class="klbl">Rejected</div><div class="kval" style="color:var(--red)">${rej}</div><div class="ksub">${rows.length?Math.round(rej/rows.length*100):0}% rate</div></div>
     <div class="kpi"><div class="klbl">Queue</div><div class="kval" style="color:var(--yellow)">${submitQueue.length}</div><div class="ksub">Pending sync</div></div>`;
@@ -1690,7 +1829,6 @@ function renderSummary() {
         :`<span class="vbadge b-rejected" style="display:inline-block">✗ Rejected</span>`;
       const ts=lr.timestamp?new Date(lr.timestamp).toLocaleString():'—';
       const q=submitQueue.some(q=>q.video_id===lr.video_id)?`<span style="font-size:10px;color:var(--yellow)">⏳</span>`:'';
-      // FIX 2: jump button uses onclick, ensure togQAed is enabled and video is found
       return `<tr>
         <td class="mono">${escH(lr.video_id)}${q}</td>
         <td>${escH(v.enterprise||'—')}</td>
@@ -1699,33 +1837,20 @@ function renderSummary() {
         <td>${escH(lr.reviewer||'—')}</td>
         <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escH(lr.comment||'—')}</td>
         <td style="white-space:nowrap;">${ts}</td>
-        <td><button class="jmp" onclick="jumpTo('${escH(lr.video_id)}')">↗ Review</button></td>
+        <td><button class="jmp" onclick="jumpTo('${escAttr(lr.video_id)}')">↗ Review</button></td>
       </tr>`;
     }).join('');
 }
 
-// FIX 2: jumpTo — enable "show QA'd" toggle first, then navigate
 function jumpTo(vid) {
-  // Enable toggle so QA'd video is visible
   document.getElementById('togQAed').checked = true;
-
-  // Switch to review page
   showPage('review');
-
-  // Need to re-apply filter with togQAed=true, then find the video
   applyFilter();
-
-  // Try to find by current filtered list first
   let i = filtered.findIndex(v => v.video_id === vid);
-  if (i >= 0) {
-    loadVideoAt(i);
-    return;
-  }
+  if (i >= 0) { loadVideoAt(i); return; }
 
-  // If not found in current videos, load enterprise for this video
   const targetVid = allVideos.find(v => v.video_id === vid);
   if (targetVid) {
-    // Make sure videos array includes it
     if (!videos.find(v => v.video_id === vid)) {
       const ent = targetVid.enterprise;
       videos = ent ? allVideos.filter(v => v.enterprise === ent) : allVideos;
@@ -1736,7 +1861,6 @@ function jumpTo(vid) {
     if (i >= 0) { loadVideoAt(i); return; }
   }
 
-  // Fallback: search by video ID
   document.getElementById('fVid').value = vid;
   applyFilter();
   i = filtered.findIndex(v => v.video_id === vid);
@@ -1758,13 +1882,19 @@ function exportCSV() {
 }
 
 // ─────────────────────────────────────────────
-//  SETTINGS
+//  SETTINGS — admin only (nitin.kumar@spyne.ai)
 // ─────────────────────────────────────────────
-function showSettings()        { document.getElementById('settingsOverlay').classList.add('open'); loadCfgInputs(); }
+function showSettings() {
+  if (!isAdmin()) { toast('Admin access required','error'); return; }
+  document.getElementById('settingsOverlay').classList.add('open');
+  loadCfgInputs();
+}
 function closeSettingsPanel()  { document.getElementById('settingsOverlay').classList.remove('open'); }
 function closeSettings(e)      { if(e.target===document.getElementById('settingsOverlay')) closeSettingsPanel(); }
 
 function loadCfgInputs() {
+  const els = ['cfgSheet','cfgGas','mapQcStatus','mapQcUser'];
+  if (!els.every(id=>document.getElementById(id))) return;
   document.getElementById('cfgSheet').value    = SHEET_URL;
   document.getElementById('cfgGas').value      = GAS_URL;
   document.getElementById('mapQcStatus').value = colMap.qcStatus||'';
@@ -1826,7 +1956,7 @@ function renderEmailMapUI() {
   el.innerHTML=e.map(([em,nm])=>
     `<div class="saved-item">
       <div class="si-desc"><span style="font-family:var(--mono);font-size:11px;">${escH(em)}</span> → <strong>${escH(nm)}</strong></div>
-      <button class="btn-del" onclick="delEmail('${escH(em)}')">✕</button>
+      <button class="btn-del" onclick="delEmail('${escAttr(em)}')">✕</button>
     </div>`
   ).join('');
 }
@@ -1895,6 +2025,19 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter')           submitReview();
   if(e.key==='ArrowLeft' ||e.key==='ArrowUp')   goPrev();
   if(e.key==='ArrowRight'||e.key==='ArrowDown')  goNext();
+});
+
+// Auto-release claims on tab close (best effort)
+window.addEventListener('beforeunload', () => {
+  const unfinished = [...claimedIds].filter(id => !localReviews[id]);
+  if (unfinished.length > 0 && navigator.sendBeacon && reviewer.email) {
+    try {
+      navigator.sendBeacon(GAS_URL, JSON.stringify({
+        action:'release', video_ids:unfinished, reviewer:reviewer.email,
+        timestamp:new Date().toISOString()
+      }));
+    } catch(e) {}
+  }
 });
 
 init();
