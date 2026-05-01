@@ -738,9 +738,8 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
     <input id="loginPass"  type="password" placeholder="Password"     autocomplete="off"/>
     <div class="login-error" id="loginError"></div>
     <button class="btn-primary" onclick="doLogin()">Sign In →</button>
-    <div class="login-info">
-      First time? Default admin: <code>nitin.kumar@spyne.ai</code><br>
-      Default password: <code>admin123</code> (change after login)
+    <div class="login-info" id="loginInfo">
+      Don't have an account? Contact your admin.
     </div>
   </div>
 </div>
@@ -880,7 +879,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
               <input type="checkbox" id="togQAed" onchange="applyFilter()"/>
               <span class="tog-slider"></span>
             </label>
-            Show already QA'd
+            Show only QA'd videos
           </label>
         </div>
 
@@ -1009,11 +1008,13 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
               <!-- Sheet & API Config -->
               <div class="admin-card">
                 <h3>⚙ Sheet & API Configuration</h3>
-                <div class="desc">Update the Google Sheet CSV URL and Apps Script endpoint.</div>
+                <div class="desc">Update the Google Sheet CSV URL, Apps Script endpoint, and the Users sheet CSV URL.</div>
                 <div class="admin-form">
-                  <input id="adminCfgSheet" placeholder="Sheet CSV URL"/>
-                  <input id="adminCfgGas" placeholder="Apps Script URL"/>
+                  <input id="adminCfgSheet" placeholder="QA data Sheet CSV URL"/>
+                  <input id="adminCfgGas" placeholder="Apps Script doPost URL"/>
+                  <input id="adminCfgUsersCsv" placeholder="Users sheet CSV URL (server-side user store)"/>
                   <button onclick="adminSaveCfg()">💾 Save Configuration</button>
+                  <button onclick="adminSyncUsers()" style="background:rgba(168,85,247,.2);color:#c084fc;">↻ Sync Users from Server</button>
                 </div>
               </div>
 
@@ -1196,6 +1197,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
 // ─────────────────────────────────────────────
 let SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&single=true&output=csv";
 let GAS_URL   = "https://script.google.com/macros/s/AKfycbzqgbmMLIuCz4j6HgFsVgEp4t2ykTsCpNCth2OlSIgIMbU6_SePL4fIHYEqogDGLxs/exec";
+let USERS_CSV_URL = ""; // Published CSV of the Users sheet tab (set by admin in Admin page)
 const CLAIM_TTL_MIN = 120;
 const ADMIN_EMAIL = "nitin.kumar@spyne.ai";
 
@@ -1241,18 +1243,57 @@ async function hashPass(p) {
 }
 
 // ─────────────────────────────────────────────
-//  USER STORE
+//  USER STORE — server-backed via CSV + GAS
 // ─────────────────────────────────────────────
-async function ensureBootstrapAdmin() {
-  if (!users[ADMIN_EMAIL]) {
-    users[ADMIN_EMAIL] = {
-      name: 'Nitin Kumar',
-      passHash: await hashPass('admin123'),
-      role: 'admin',
-      createdAt: new Date().toISOString(),
-    };
-    lsSet('qa_users', users);
+// Local `users` is a cache of the server-side Users sheet (single source of truth).
+// Admin actions (add/reset/delete/role) POST to GAS; afterwards we refetch the CSV.
+
+async function fetchUsersFromServer() {
+  if (!USERS_CSV_URL) return null;
+  try {
+    const res = await fetch(USERS_CSV_URL + (USERS_CSV_URL.includes('?')?'&':'?') + '_t=' + Date.now());
+    if (!res.ok) return null;
+    const text = await res.text();
+    const rows = parseCSV(text);
+    const map = {};
+    rows.forEach(r => {
+      const email = (r['email']||'').trim().toLowerCase();
+      if (!email || !email.includes('@')) return;
+      // Treat 'active' = 'false' / '0' / 'no' as deactivated
+      const activeRaw = (r['active']||'true').trim().toLowerCase();
+      const active = !(activeRaw === 'false' || activeRaw === '0' || activeRaw === 'no');
+      if (!active) return;
+      map[email] = {
+        name:     r['name']||email.split('@')[0],
+        role:    (r['role']||'user').trim().toLowerCase()==='admin'?'admin':'user',
+        passHash: r['pass_hash']||'',
+        createdAt:r['created_at']||'',
+        updatedAt:r['updated_at']||'',
+        source:   'server',
+      };
+    });
+    return map;
+  } catch (e) {
+    console.warn('Failed to fetch users CSV:', e);
+    return null;
   }
+}
+
+async function ensureBootstrapAdmin() {
+  // Only create local bootstrap admin if:
+  //   (a) no Users CSV is configured, AND
+  //   (b) no users exist locally yet
+  // Once an admin sets up the Users CSV, local bootstrap is irrelevant — server is authoritative.
+  if (USERS_CSV_URL) return;
+  if (Object.keys(users).length > 0) return;
+  users[ADMIN_EMAIL] = {
+    name: 'Nitin Kumar',
+    passHash: await hashPass('admin123'),
+    role: 'admin',
+    createdAt: new Date().toISOString(),
+    source: 'local-bootstrap',
+  };
+  lsSet('qa_users', users);
 }
 
 // ─────────────────────────────────────────────
@@ -1266,18 +1307,28 @@ async function init() {
   colMap        = JSON.parse(ls('qa_column_map')     || '{"qcStatus":"","qcUser":""}');
   claimedIds    = new Set(JSON.parse(ls('qa_claimed_ids') || '[]'));
   users         = JSON.parse(ls('qa_users') || '{}');
-  if (ls('qa_sheet_url')) SHEET_URL = ls('qa_sheet_url');
-  if (ls('qa_gas_url'))   GAS_URL   = ls('qa_gas_url');
+  if (ls('qa_sheet_url'))     SHEET_URL     = ls('qa_sheet_url');
+  if (ls('qa_gas_url'))       GAS_URL       = ls('qa_gas_url');
+  if (ls('qa_users_csv_url')) USERS_CSV_URL = ls('qa_users_csv_url');
   if (ls('theme') === 'light') document.body.classList.add('light');
   applyFont(ls('qa_font') || 'geist');
 
-  await ensureBootstrapAdmin();
+  // Try to sync users from the server-side CSV first
+  const serverUsers = await fetchUsersFromServer();
+  if (serverUsers) {
+    users = serverUsers;
+    lsSet('qa_users', users);
+  } else {
+    // No server CSV (or fetch failed) — use local cache, bootstrap if empty
+    await ensureBootstrapAdmin();
+  }
 
   buildFontGrid();
   renderCFList();
   renderEmailMapUI();
   loadCfgInputs();
   updateQueueBadge();
+  updateLoginInfoBanner();
 
   const saved = ls('qa_reviewer');
   if (saved) {
@@ -1301,6 +1352,19 @@ async function init() {
 }
 const ls = k => localStorage.getItem(k);
 const lsSet = (k,v) => localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+
+// Show different login-info text based on whether server users CSV is configured
+function updateLoginInfoBanner() {
+  const el = document.getElementById('loginInfo');
+  if (!el) return;
+  if (!USERS_CSV_URL && Object.keys(users).length <= 1 && users[ADMIN_EMAIL]?.source === 'local-bootstrap') {
+    // First-time setup: only the local bootstrap admin exists.
+    // Show the bootstrap hint ONLY in this very narrow case so subsequent users don't see it.
+    el.innerHTML = '<span style="color:var(--yellow);">⚠ First-time setup mode</span> — sign in as the bootstrap admin and configure the Users CSV in the Admin page.';
+  } else {
+    el.innerHTML = "Don't have an account? Contact your admin.";
+  }
+}
 
 function setReviewer() {
   document.getElementById('revName').textContent  = reviewer.name;
@@ -1349,6 +1413,17 @@ async function doLogin() {
     err.style.display='block';
     return;
   }
+
+  // If a Users CSV is configured, refresh from server before authenticating
+  // so newly-added users (or password resets) take effect immediately.
+  if (USERS_CSV_URL) {
+    const serverUsers = await fetchUsersFromServer();
+    if (serverUsers) {
+      users = serverUsers;
+      lsSet('qa_users', users);
+    }
+  }
+
   const u = users[email];
   if (!u) {
     err.textContent = 'No account found for this email. Contact your admin.';
@@ -1361,14 +1436,24 @@ async function doLogin() {
     err.style.display='block';
     return;
   }
-  // Authenticated. Use stored name; fall back to provided name.
+  // Authenticated.
   reviewer = {
     name: u.name || name || email.split('@')[0],
     email,
     role: u.role || 'user',
   };
-  // If user provided a different name, update store
-  if (name && name !== u.name) {
+  // If user provided a different display name, send it to the server
+  if (name && name !== u.name && USERS_CSV_URL) {
+    postToSheet({
+      action: 'user_update_name',
+      email, name,
+      reviewer: email,
+      timestamp: new Date().toISOString(),
+    });
+    u.name = name;
+    reviewer.name = name;
+    lsSet('qa_users', users);
+  } else if (name && name !== u.name) {
     u.name = name;
     reviewer.name = name;
     lsSet('qa_users', users);
@@ -1445,9 +1530,24 @@ async function doChangePass() {
   const oldHash = await hashPass(old);
   if (oldHash !== u.passHash) { res.textContent='Current password is incorrect.'; res.style.display='block'; return; }
 
-  u.passHash = await hashPass(nw);
-  u.passUpdatedAt = new Date().toISOString();
+  const newHash = await hashPass(nw);
+  const nowISO = new Date().toISOString();
+  u.passHash = newHash;
+  u.passUpdatedAt = nowISO;
   lsSet('qa_users', users);
+
+  // Sync to server so user can log in from other browsers
+  if (USERS_CSV_URL) {
+    await postToSheet({
+      action: 'user_change_pass',
+      email: reviewer.email,
+      pass_hash: newHash,
+      updated_at: nowISO,
+      reviewer: reviewer.email,
+      timestamp: nowISO,
+    });
+  }
+
   closeChangePass();
   toast('Password updated ✓','success');
 }
@@ -1740,7 +1840,12 @@ function applyFilter(cfObj) {
   filtered = videos.filter(v=>{
     // Multi-user: hide videos locked by other reviewers
     if (isLockedByOther(v)) return false;
-    if (!showQA && isQAed(v)) return false;
+    // Toggle: OFF = show only pending (not QA'd), ON = show only QA'd
+    if (showQA) {
+      if (!isQAed(v)) return false;
+    } else {
+      if (isQAed(v))  return false;
+    }
     if (ent    && v.enterprise!==ent)   return false;
     if (user   && v.qc_user  !==user)   return false;
     if (status && v.status   !==status) return false;
@@ -1765,7 +1870,10 @@ function applyFilter(cfObj) {
   else {
     currentIdx=-1;
     const showQAed = document.getElementById('togQAed').checked;
-    document.getElementById('videoWrap').innerHTML=`<div class="no-vid"><span>${showQAed?'🎉':'▶'}</span>${showQAed?'Nothing to show':'Toggle "Show already QA\'d" to see reviewed videos'}</div>`;
+    const msg = showQAed
+      ? 'No QA\'d videos yet'
+      : '🎉 All caught up — no pending videos';
+    document.getElementById('videoWrap').innerHTML=`<div class="no-vid"><span>${showQAed?'◈':'🎉'}</span>${msg}</div>`;
     document.getElementById('metaPane').innerHTML ='<div class="m-label">Details</div><div style="font-size:12px;color:var(--text3);">No videos match</div>';
     document.getElementById('vidCtr').textContent ='0 / 0';
   }
@@ -1812,8 +1920,8 @@ function renderList() {
   if (!filtered.length) {
     const showQAed = document.getElementById('togQAed').checked;
     const msg = showQAed
-      ? 'No videos found'
-      : 'No pending videos — enable "Show already QA\'d" above to see reviewed videos';
+      ? 'No QA\'d videos yet — toggle off to see pending'
+      : '🎉 No pending videos — toggle on to see your QA history';
     list.innerHTML=`<div class="list-empty">${msg}</div>`; return;
   }
   list.innerHTML=filtered.map((v,i)=>{
@@ -2202,8 +2310,9 @@ function exportCSV() {
 function renderAdmin() {
   if (!isAdmin()) return;
   // Populate config inputs
-  document.getElementById('adminCfgSheet').value = SHEET_URL;
-  document.getElementById('adminCfgGas').value   = GAS_URL;
+  document.getElementById('adminCfgSheet').value     = SHEET_URL;
+  document.getElementById('adminCfgGas').value       = GAS_URL;
+  document.getElementById('adminCfgUsersCsv').value  = USERS_CSV_URL;
   document.getElementById('adminMapStatus').value = colMap.qcStatus || '';
   document.getElementById('adminMapUser').value   = colMap.qcUser   || '';
   renderUserList();
@@ -2287,20 +2396,45 @@ async function adminAddUser() {
   if (!name) { toast('Name is required','error'); return; }
   if (!pass || pass.length < 6) { toast('Password must be at least 6 characters','error'); return; }
   if (users[email]) { toast('User already exists','error'); return; }
+  if (!USERS_CSV_URL) {
+    toast('Set the Users CSV URL in admin config first','error');
+    return;
+  }
 
-  users[email] = {
-    name, role,
-    passHash: await hashPass(pass),
-    createdAt: new Date().toISOString(),
+  const passHash = await hashPass(pass);
+  const nowISO = new Date().toISOString();
+  const record = {
+    email, name, role, passHash,
+    createdAt: nowISO,
     createdBy: reviewer.email,
   };
+
+  // Optimistic local update so UI reflects immediately
+  users[email] = { name, role, passHash, createdAt: nowISO, source: 'pending-server' };
   lsSet('qa_users', users);
+
+  // POST to GAS — Apps Script must handle action='user_add' and append to Users sheet
+  const ok = await postToSheet({
+    action: 'user_add',
+    email, name, role,
+    pass_hash: passHash,
+    created_at: nowISO,
+    created_by: reviewer.email,
+    timestamp: nowISO,
+  });
+
+  // Refresh from server to confirm
+  setTimeout(async ()=>{
+    const fresh = await fetchUsersFromServer();
+    if (fresh) { users = fresh; lsSet('qa_users', users); renderUserList(); }
+  }, 1200);
+
   document.getElementById('newUserEmail').value='';
   document.getElementById('newUserName').value='';
   document.getElementById('newUserPass').value='';
   document.getElementById('newUserRole').value='user';
   renderUserList();
-  toast(`User ${email} created ✓`,'success');
+  toast(`User ${email} created — ask them to sign in with the password you set`,'success');
 }
 
 function adminResetPass(email) {
@@ -2318,10 +2452,33 @@ async function doResetPass() {
   if (!resetPassTarget || !users[resetPassTarget]) { closeResetPass(); return; }
   const pw = document.getElementById('rpNew').value;
   if (!pw || pw.length < 6) { toast('Password must be at least 6 characters','error'); return; }
-  users[resetPassTarget].passHash = await hashPass(pw);
-  users[resetPassTarget].passUpdatedAt = new Date().toISOString();
+  const passHash = await hashPass(pw);
+  const nowISO = new Date().toISOString();
+
+  // Optimistic local update
+  users[resetPassTarget].passHash = passHash;
+  users[resetPassTarget].passUpdatedAt = nowISO;
   users[resetPassTarget].passUpdatedBy = reviewer.email;
   lsSet('qa_users', users);
+
+  // POST to GAS
+  if (USERS_CSV_URL) {
+    await postToSheet({
+      action: 'user_reset_pass',
+      email: resetPassTarget,
+      pass_hash: passHash,
+      updated_at: nowISO,
+      reviewer: reviewer.email,
+      timestamp: nowISO,
+    });
+    setTimeout(async ()=>{
+      const fresh = await fetchUsersFromServer();
+      if (fresh) { users = fresh; lsSet('qa_users', users); renderUserList(); }
+    }, 1200);
+  } else {
+    toast('Warning: no Users CSV configured — change is local only','warn');
+  }
+
   toast(`Password reset for ${resetPassTarget}`,'success');
   closeResetPass();
 }
@@ -2332,6 +2489,21 @@ function adminToggleRole(email) {
   const u = users[email]; if (!u) return;
   u.role = u.role === 'admin' ? 'user' : 'admin';
   lsSet('qa_users', users);
+
+  if (USERS_CSV_URL) {
+    postToSheet({
+      action: 'user_set_role',
+      email, role: u.role,
+      updated_at: new Date().toISOString(),
+      reviewer: reviewer.email,
+      timestamp: new Date().toISOString(),
+    });
+    setTimeout(async ()=>{
+      const fresh = await fetchUsersFromServer();
+      if (fresh) { users = fresh; lsSet('qa_users', users); renderUserList(); }
+    }, 1200);
+  }
+
   renderUserList();
   toast(`${email} is now ${u.role}`,'success');
 }
@@ -2343,6 +2515,20 @@ function adminDeleteUser(email) {
   if (!confirm(`Delete user ${email}? They will lose all access.`)) return;
   delete users[email];
   lsSet('qa_users', users);
+
+  if (USERS_CSV_URL) {
+    postToSheet({
+      action: 'user_delete',
+      email,
+      reviewer: reviewer.email,
+      timestamp: new Date().toISOString(),
+    });
+    setTimeout(async ()=>{
+      const fresh = await fetchUsersFromServer();
+      if (fresh) { users = fresh; lsSet('qa_users', users); renderUserList(); }
+    }, 1200);
+  }
+
   renderUserList();
   toast(`User ${email} deleted`,'info');
 }
@@ -2351,9 +2537,31 @@ function adminSaveCfg() {
   if (!isAdmin()) return;
   const s = document.getElementById('adminCfgSheet').value.trim();
   const g = document.getElementById('adminCfgGas').value.trim();
+  const u = document.getElementById('adminCfgUsersCsv').value.trim();
   if (s) { SHEET_URL = s; lsSet('qa_sheet_url', s); }
   if (g) { GAS_URL   = g; lsSet('qa_gas_url',   g); }
+  // Users CSV URL — allow clearing it too
+  USERS_CSV_URL = u;
+  if (u) lsSet('qa_users_csv_url', u);
+  else   localStorage.removeItem('qa_users_csv_url');
   toast('Configuration saved ✓','success');
+}
+
+async function adminSyncUsers() {
+  if (!isAdmin()) return;
+  if (!USERS_CSV_URL) {
+    toast('Set the Users CSV URL first, then save configuration','error');
+    return;
+  }
+  const fresh = await fetchUsersFromServer();
+  if (!fresh) {
+    toast('Failed to fetch users from server. Check the CSV URL.','error');
+    return;
+  }
+  users = fresh;
+  lsSet('qa_users', users);
+  renderUserList();
+  toast(`Synced ${Object.keys(users).length} user${Object.keys(users).length===1?'':'s'} ✓`,'success');
 }
 
 function adminSaveColMap() {
