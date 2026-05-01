@@ -1010,7 +1010,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
 // ─────────────────────────────────────────────
 // Live data is fetched from the Apps Script endpoint (no longer the published CSV)
 // so claims/releases are reflected in real time.
-let GAS_URL   = "https://script.google.com/macros/s/AKfycbwmy9mVOBSOIj-_-4Dg37uE0-b83qUBhixxwQxkwcNdAJR89nqB7utRRqXEkpMm07n5/exec";
+let GAS_URL   = "https://script.google.com/macros/s/AKfycbzDcFmycnU2nGt4A0FHeSlPPyiHWqQzouyU4gml4G6u9U_BeJ3PVT4ti8PU4cqz7Zey/exec";
 // Legacy: only used if GAS_URL is not configured (kept as fallback)
 let SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&single=true&output=csv";
 const CLAIM_TTL_MIN = 120;
@@ -1059,7 +1059,9 @@ function init() {
   colMap        = JSON.parse(ls('qa_column_map')     || '{"qcStatus":"","qcUser":""}');
   claimedIds    = new Set(JSON.parse(ls('qa_claimed_ids') || '[]'));
   if (ls('qa_sheet_url')) SHEET_URL = ls('qa_sheet_url');
-  if (ls('qa_gas_url'))   GAS_URL   = ls('qa_gas_url');
+  // Use 'qa_gas_url_v2' so the old cached URL from previous deployments is ignored.
+  // (The script's /exec URL changed when redeployed as a new deployment.)
+  if (ls('qa_gas_url_v2'))   GAS_URL   = ls('qa_gas_url_v2');
   if (ls('theme') === 'light') document.body.classList.add('light');
   applyFont(ls('qa_font') || 'geist');
   buildFontGrid();
@@ -2245,7 +2247,9 @@ function loadCfgInputs() {
 function saveCfg() {
   SHEET_URL=document.getElementById('cfgSheet').value.trim();
   GAS_URL  =document.getElementById('cfgGas').value.trim();
-  lsSet('qa_sheet_url',SHEET_URL); lsSet('qa_gas_url',GAS_URL);
+  lsSet('qa_sheet_url',SHEET_URL); lsSet('qa_gas_url_v2',GAS_URL);
+  // Clear any old key so it doesn't shadow the new one
+  localStorage.removeItem('qa_gas_url');
   toast('Config saved ✓','success');
 }
 function saveColMap() {
