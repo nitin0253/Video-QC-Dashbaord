@@ -1003,10 +1003,15 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
 // ─────────────────────────────────────────────
 //  CONFIG
 // ─────────────────────────────────────────────
-let SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&single=true&output=csv";
+// Live data is fetched from the Apps Script endpoint (no longer the published CSV)
+// so claims/releases are reflected in real time.
 let GAS_URL   = "https://script.google.com/macros/s/AKfycbwmy9mVOBSOIj-_-4Dg37uE0-b83qUBhixxwQxkwcNdAJR89nqB7utRRqXEkpMm07n5/exec";
+// Legacy: only used if GAS_URL is not configured (kept as fallback)
+let SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQviNsOTXM2LlIs5ipLiil6Nox9r6BH2o-7-WtgLbTKDIltzZlHXxnlWYm7KkJLfr1JsDM69wyevuT/pub?gid=846566121&single=true&output=csv";
 const CLAIM_TTL_MIN = 120;
 const ADMIN_EMAIL = "nitin.kumar@spyne.ai";
+// How often to poll for fresh data (ms)
+const POLL_INTERVAL_MS = 12000;
 
 const FONTS = [
   {k:'geist',       lbl:'Geist',         fam:"'Geist',sans-serif",          prev:'Aa Bb 123'},
@@ -1063,7 +1068,7 @@ function init() {
     reviewer = JSON.parse(saved);
     setReviewer();
     showScreen('entScreen');
-    loadAllData();
+    loadAllData().then(() => { buildEntList(); startPolling(); });
   } else {
     showScreen('loginScreen');
   }
@@ -1111,7 +1116,7 @@ function doLogin() {
   lsSet('qa_reviewer', reviewer);
   setReviewer();
   showScreen('entScreen');
-  loadAllData();
+  loadAllData().then(() => { buildEntList(); startPolling(); });
 }
 document.getElementById('loginEmail').addEventListener('input', function() {
   const email = this.value.trim().toLowerCase();
@@ -1136,6 +1141,7 @@ function acceptHint() {
 document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginName').focus();});
 document.getElementById('loginName').addEventListener('keydown', e=>{if(e.key==='Enter')doLogin();});
 function logout() {
+  stopPolling();
   // Release any claimed videos so others can pick them up
   if (claimedIds.size > 0 && reviewer.email) {
     postToSheet({action:'release', video_ids:[...claimedIds], reviewer:reviewer.email, timestamp:new Date().toISOString()});
@@ -1172,9 +1178,25 @@ function parseCSV(text) {
 //  CLAIM HELPERS — multi-user safety
 // ─────────────────────────────────────────────
 function isLockedByOther(v) {
+  // Done videos aren't "locked" — they're done
+  if (v.qa_status && v.qa_status.trim()) return false;
+  if (v.qa_state === 'done') return false;
+
   const claimedBy = (v.qa_claimed_by || '').trim().toLowerCase();
   if (!claimedBy) return false;
-  if (claimedBy === reviewer.email.toLowerCase()) return false;
+  if (reviewer.email && claimedBy === reviewer.email.toLowerCase()) return false;
+  // If qa_state is in_progress, treat as locked regardless of timestamp parsing
+  // (server enforces TTL via expireStaleClaims trigger)
+  if (v.qa_state === 'in_progress') {
+    // Still respect the TTL on the client side as a fallback
+    const claimedAt = v.qa_claimed_at;
+    if (!claimedAt) return true;
+    const t = new Date(claimedAt);
+    if (isNaN(t)) return true;
+    const ageMin = (Date.now() - t.getTime()) / 60000;
+    return ageMin < CLAIM_TTL_MIN;
+  }
+  // Legacy fallback: claimed_by set but no state column
   const claimedAt = v.qa_claimed_at;
   if (!claimedAt) return false;
   const t = new Date(claimedAt);
@@ -1187,7 +1209,7 @@ function lockOwner(v) {
 }
 
 // ─────────────────────────────────────────────
-//  LOAD DATA
+//  LOAD DATA — live from Apps Script (real-time)
 // ─────────────────────────────────────────────
 async function loadAllData() {
   const btn = document.getElementById('refreshBtn');
@@ -1195,51 +1217,156 @@ async function loadAllData() {
   const entBtn = document.getElementById('entSyncBtn');
   if (entBtn) entBtn.classList.add('spinning');
   try {
-    const res  = await fetch(SHEET_URL+'&_t='+Date.now());
-    const text = await res.text();
-    allVideos  = parseCSV(text).map(r=>{
-      const qsKey = colMap.qcStatus||'qc_user';
-      const quKey = colMap.qcUser  ||'qc_user_email_id';
+    // Fetch live data from Apps Script (bypasses Google's published-CSV cache)
+    const url = GAS_URL + (GAS_URL.includes('?') ? '&' : '?') + 'action=list&_t=' + Date.now();
+    const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'list failed');
+
+    const rows = json.rows || [];
+    allVideos = rows.map(r => {
+      const qsKey = colMap.qcStatus || 'qc_user';
+      const quKey = colMap.qcUser   || 'qc_user_email_id';
       return {
-        video_id:     r['v.video_id']||r['video_id']||'',
-        enterprise:   r['enterprise_name']||'',
-        enterprise_id:r['v.enterprise_id']||r['enterprise_id']||'',
-        qc_user:      r[quKey]||r['qc_user_email_id']||'',
-        qc_status:    r[qsKey]||r['qc_status']||r['verified_status']||'',
-        status:       (r['verified_status']||'').toLowerCase(),
-        reason:       r['rejected_reason']||'',
-        vin:          r['vin_name']||'',
-        sku:          r['sku_id']||'',
-        url:          r['video_url']||'',
-        created:      r['created_on']||'',
-        updated:      r['updated_on']||'',
-        qa_status:    r['qa_status']||'',
-        qa_reason:    r['qa_reason']||'',
-        qa_reviewer:  r['qa_reviewer']||'',
-        qa_timestamp: r['qa_timestamp']||'',
-        qa_claimed_by:r['qa_claimed_by']||'',
-        qa_claimed_at:r['qa_claimed_at']||'',
+        video_id:     r['v.video_id'] || r['video_id'] || '',
+        enterprise:   r['enterprise_name'] || '',
+        enterprise_id:r['v.enterprise_id'] || r['enterprise_id'] || '',
+        qc_user:      r[quKey] || r['qc_user_email_id'] || '',
+        qc_status:    r[qsKey] || r['qc_status'] || r['verified_status'] || '',
+        status:       String(r['verified_status'] || '').toLowerCase(),
+        reason:       r['rejected_reason'] || '',
+        vin:          r['vin_name'] || '',
+        sku:          r['sku_id'] || '',
+        url:          r['video_url'] || '',
+        created:      r['created_on'] || '',
+        updated:      r['updated_on'] || '',
+        qa_status:    r['qa_status'] || '',
+        qa_reason:    r['qa_reason'] || '',
+        qa_reviewer:  r['qa_reviewer'] || '',
+        qa_timestamp: r['qa_timestamp'] || '',
+        qa_claimed_by:r['qa_claimed_by'] || '',
+        qa_claimed_at:r['qa_claimed_at'] || '',
+        qa_state:     String(r['qa_state'] || '').toLowerCase(),
       };
     }).filter(v => v.video_id && v.url);
-    buildEntList();
+
+    return true;
   } catch(e) {
-    toast('Failed to load sheet data','error');
-    console.error(e);
+    console.error('loadAllData failed:', e);
+    toast('Failed to load live data — check Apps Script deployment', 'error');
+    return false;
   } finally {
     btn.classList.remove('spinning');
     if (entBtn) entBtn.classList.remove('spinning');
   }
 }
 
+// ─────────────────────────────────────────────
+//  POLLING — keep dashboard in sync with the sheet
+// ─────────────────────────────────────────────
+let pollTimer = null;
+let isPolling = false;
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(pollTick, POLL_INTERVAL_MS);
+}
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+async function pollTick() {
+  // Don't stack up requests — skip if a previous poll is still running
+  if (isPolling) return;
+  // Don't poll if the user is mid-review with an unsaved decision
+  if (currentAction) return;
+  // Don't poll if the tab is hidden (saves quota)
+  if (document.hidden) return;
+
+  isPolling = true;
+  try {
+    const ok = await loadAllData();
+    if (!ok) return;
+
+    // Refresh whichever screen is currently visible
+    const onEntScreen = !document.getElementById('entScreen').classList.contains('hidden');
+    if (onEntScreen) {
+      buildEntList();
+      return;
+    }
+
+    // On main dashboard — refresh the working video list WITHOUT reloading
+    // the currently-playing video.
+    const currentVid = (currentIdx >= 0 && filtered[currentIdx]) ? filtered[currentIdx].video_id : null;
+
+    // Recompute videos from current claim/enterprise context
+    if (claimedIds.size > 0) {
+      const firstClaimed = allVideos.find(v=>claimedIds.has(v.video_id));
+      const ent = firstClaimed ? firstClaimed.enterprise : null;
+      videos = ent ? allVideos.filter(v=>v.enterprise===ent) : allVideos;
+    } else {
+      videos = [...allVideos];
+    }
+
+    // Recompute `filtered` inline (mirrors applyFilter logic, minus loadVideoAt)
+    const showQA = document.getElementById('togQAed').checked;
+    const ent    = document.getElementById('fEnt').value;
+    const user   = document.getElementById('fUser').value;
+    const status = document.getElementById('fStatus').value;
+    const vidId  = document.getElementById('fVid').value.trim().toLowerCase();
+    const vin    = document.getElementById('fVin').value.trim().toLowerCase();
+    const sku    = document.getElementById('fSku').value.trim().toLowerCase();
+
+    filtered = videos.filter(v=>{
+      if (isLockedByOther(v)) return false;
+      if (showQA) { if (!isQAed(v)) return false; }
+      else        { if (isQAed(v))  return false; }
+      if (ent    && v.enterprise!==ent)   return false;
+      if (user   && v.qc_user  !==user)   return false;
+      if (status && v.status   !==status) return false;
+      if (vidId  && !v.video_id.toLowerCase().includes(vidId)) return false;
+      if (vin    && !v.vin.toLowerCase().includes(vin))        return false;
+      if (sku    && !v.sku.toLowerCase().includes(sku))        return false;
+      if (!matchDate(v)) return false;
+      return true;
+    });
+
+    // Re-render list and stats (cheap, no video reload)
+    renderList();
+    updateStats();
+    updateBatchPill();
+
+    // Try to keep the current video selected
+    if (currentVid) {
+      const newIdx = filtered.findIndex(v => v.video_id === currentVid);
+      if (newIdx >= 0) {
+        currentIdx = newIdx;
+        document.querySelectorAll('.vitem').forEach((el,i)=>el.classList.toggle('active', i===currentIdx));
+        document.getElementById('vidCtr').textContent = `${currentIdx + 1} / ${filtered.length}`;
+        // Refresh the right-side metadata pane (status may have changed)
+        renderMeta(filtered[currentIdx]);
+      } else {
+        // Current video disappeared from filtered (e.g. another reviewer's claim,
+        // or it just got QA'd). Don't yank the player out from under the user.
+        document.getElementById('vidCtr').textContent = `— / ${filtered.length}`;
+      }
+    }
+  } finally {
+    isPolling = false;
+  }
+}
+
 function reloadData() {
-  loadAllData().then(()=>{
+  loadAllData().then((ok)=>{
+    if (!ok) return;
     applyBatch();
     toast(`✓ ${allVideos.length} videos refreshed`,'success');
   });
 }
 
 function entSync() {
-  loadAllData().then(()=>{
+  loadAllData().then((ok)=>{
+    if (!ok) return;
+    buildEntList();
     toast(`✓ Synced — ${allVideos.length} videos loaded`,'success');
   });
 }
@@ -1248,7 +1375,8 @@ function entSync() {
 //  QA CHECK
 // ─────────────────────────────────────────────
 function isQAed(v) {
-  return !!(v.qa_status&&v.qa_status.trim()) || !!localReviews[v.video_id];
+  if (v.qa_state === 'done') return true;
+  return !!(v.qa_status && v.qa_status.trim()) || !!localReviews[v.video_id];
 }
 
 // ─────────────────────────────────────────────
@@ -1266,10 +1394,10 @@ function renderEntList() {
   const map = {};
   allVideos.forEach(v=>{
     const e = v.enterprise || '(Unknown)';
-    if (!map[e]) map[e] = {total:0, pending:0, locked:0};
+    if (!map[e]) map[e] = {total:0, pending:0, locked:0, done:0};
     map[e].total++;
     if (isQAed(v)) {
-      // already done — counted only in total
+      map[e].done++;
     } else if (isLockedByOther(v)) {
       map[e].locked++;
     } else {
@@ -1291,18 +1419,23 @@ function renderEntList() {
 
   list.innerHTML = ents.map(([name,counts])=>{
     const lockedHtml = counts.locked > 0
-      ? `<span class="pill pill-locked" title="Locked by other reviewers">${counts.locked} locked</span>`
+      ? `<span class="pill pill-locked" title="In progress by other reviewers">⏳ ${counts.locked} in progress</span>`
       : '';
+    const hintParts = [`${counts.total} total`];
+    if (counts.pending > 0)  hintParts.push(`${counts.pending} available`);
+    if (counts.locked > 0)   hintParts.push(`${counts.locked} in progress by others`);
+    if (counts.done > 0)     hintParts.push(`${counts.done} done`);
+    const disabled = counts.pending === 0;
     return `
     <div class="ent-row">
       <div>
         <div class="name">${escH(name)}</div>
-        <div class="hint">${counts.total} total · ${counts.pending} available${counts.locked?' · '+counts.locked+' in progress by others':''}</div>
+        <div class="hint">${hintParts.join(' · ')}</div>
       </div>
       <div class="ent-row-right">
         ${lockedHtml}
-        <span class="pill ${counts.pending>0?'pill-pending':'pill-done'}">${counts.pending} available</span>
-        <button class="claim-btn" onclick="claimBatch('${escAttr(name)}')" ${counts.pending===0?'disabled':''}>Start QA →</button>
+        <span class="pill ${counts.pending>0?'pill-pending':(counts.done===counts.total?'pill-done':'pill-locked')}">${counts.pending} available</span>
+        <button class="claim-btn" onclick="claimBatch('${escAttr(name)}')" ${disabled?'disabled title="Nothing available right now"':''}>Start QA →</button>
       </div>
     </div>`;
   }).join('');
@@ -1311,38 +1444,66 @@ function renderEntList() {
 async function claimBatch(enterprise) {
   curEnterprise = enterprise;
 
-  const pool = allVideos.filter(v=>{
-    if (enterprise && v.enterprise !== enterprise) return false;
-    return true;
-  });
+  // Show a loading state on the button(s) while we claim
+  toast('Claiming videos…', 'info');
 
-  const pendingPool = pool.filter(v => !isQAed(v) && !isLockedByOther(v));
-  if (pendingPool.length === 0) {
-    toast('No available videos to claim — try another enterprise', 'warn');
+  // ATOMIC server-side claim. The server returns the actual video_ids it
+  // assigned to us, after re-checking the live sheet under a lock.
+  // (Anything another user grabbed between our last refresh and now is excluded.)
+  const reqBody = {
+    action: 'claim',
+    reviewer: reviewer.email,
+    timestamp: new Date().toISOString(),
+  };
+  if (enterprise) reqBody.enterprise = enterprise;
+  // If we want to claim a specific set, pass video_ids instead.
+
+  let claimResult;
+  try {
+    claimResult = await postToSheetReadable(reqBody);
+  } catch (e) {
+    toast('Claim failed — check connection and try again', 'error');
+    console.error('claim error:', e);
+    return;
+  }
+  if (!claimResult || !claimResult.ok) {
+    toast('Claim rejected by server' + (claimResult && claimResult.error ? ': ' + claimResult.error : ''), 'error');
+    return;
+  }
+  const claimed = Array.isArray(claimResult.claimed) ? claimResult.claimed : [];
+  const skipped = Array.isArray(claimResult.skipped) ? claimResult.skipped : [];
+  if (claimed.length === 0) {
+    toast(skipped.length
+      ? `Nothing claimed — ${skipped.length} videos were already taken by other reviewers`
+      : 'No available videos to claim — try another enterprise',
+      'warn');
+    // Refresh so we see the latest counts
+    await loadAllData();
+    buildEntList();
     return;
   }
 
-  claimedIds = new Set(pendingPool.map(v=>v.video_id));
+  claimedIds = new Set(claimed);
   lsSet('qa_claimed_ids', [...claimedIds]);
 
-  // Optimistic local lock
-  const nowISO = new Date().toISOString();
-  pendingPool.forEach(v=>{
-    v.qa_claimed_by = reviewer.email;
-    v.qa_claimed_at = nowISO;
-  });
-
-  // Fire-and-forget claim to server
-  postToSheet({action:'claim', video_ids:[...claimedIds], reviewer:reviewer.email, timestamp:nowISO});
+  // Refresh local data so we have the up-to-date claim state from the sheet
+  await loadAllData();
 
   hideScreens();
+  // videos = all videos for this enterprise (so the toggle to show QA'd works)
+  const pool = enterprise
+    ? allVideos.filter(v => v.enterprise === enterprise)
+    : allVideos.filter(v => claimedIds.has(v.video_id));
   videos = pool;
+
   applyFilter();
   populateSidebarFilters();
   populateSumFilters();
   updateStats();
   updateBatchPill();
-  toast(`✓ Claimed ${pendingPool.length} video${pendingPool.length===1?'':'s'}${enterprise?' from '+enterprise:''}`,'success');
+
+  const skippedNote = skipped.length ? ` (${skipped.length} were taken by others)` : '';
+  toast(`✓ Claimed ${claimed.length} video${claimed.length===1?'':'s'}${enterprise?' from '+enterprise:''}${skippedNote}`,'success');
 }
 
 function showEntScreen() {
@@ -1728,6 +1889,24 @@ async function postToSheet(payload) {
   } catch(e) { return false; }
 }
 
+// Like postToSheet but reads the JSON response (used when we need to know
+// whether the server actually accepted the request — e.g. for atomic claim).
+// Apps Script web apps with "Anyone" access return CORS-permissive responses.
+// We send Content-Type: text/plain so the request is "simple" (no preflight).
+async function postToSheetReadable(payload) {
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    mode: 'cors',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const text = await res.text();
+  try { return JSON.parse(text); }
+  catch (e) { throw new Error('Invalid JSON response: ' + text.slice(0, 200)); }
+}
+
 async function flushQueue() {
   if(!submitQueue.length) return;
   toast(`Syncing ${submitQueue.length} items…`,'info');
@@ -2037,6 +2216,13 @@ window.addEventListener('beforeunload', () => {
         timestamp:new Date().toISOString()
       }));
     } catch(e) {}
+  }
+});
+
+// When tab becomes visible again, refresh immediately
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && pollTimer) {
+    pollTick();
   }
 });
 
