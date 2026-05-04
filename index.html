@@ -681,8 +681,8 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
   <div class="ent-card">
     <div class="ent-head">
       <div>
-        <h2>Select Enterprise</h2>
-        <p class="sub">Click "Start QA" on any enterprise to begin reviewing.</p>
+        <h2>Home</h2>
+        <p class="sub">Pick an enterprise to start QA, or filter by user / verified status.</p>
       </div>
       <div class="ent-head-actions">
         <button class="ent-head-btn" id="entSyncBtn" onclick="entSync()" title="Sync data from sheet">
@@ -752,7 +752,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
         <span class="sico">⚙</span><span class="snav-label">Settings</span>
       </button>
       <button class="snav-item" onclick="showEntScreen()">
-        <span class="sico">↩</span><span class="snav-label">Change Enterprise</span>
+        <span class="sico">⌂</span><span class="snav-label">Home</span>
       </button>
       <button class="snav-item" onclick="toggleTheme()">
         <span class="sico" id="themeIco">☀</span><span class="snav-label">Toggle Theme</span>
@@ -790,7 +790,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
             <div class="date-tab"        data-v="yesterday" onclick="setDate(this,'yesterday')">Yesterday</div>
             <div class="date-tab"        data-v="week"      onclick="setDate(this,'week')">7d</div>
           </div>
-          <select id="fEnt"><option value="">All Enterprises</option></select>
+          <div id="fEntWrap"><select id="fEnt"><option value="">All Enterprises</option></select></div>
           <select id="fUser"><option value="">All QC Users</option></select>
           <select id="fStatus">
             <option value="">All Statuses</option>
@@ -1345,6 +1345,7 @@ function pruneLocalReviews() {
 // ─────────────────────────────────────────────
 let pollTimer = null;
 let isPolling = false;
+let lastClaimAt = 0; // timestamp of last successful claim — pause polls briefly after
 function startPolling() {
   if (pollTimer) return;
   pollTimer = setInterval(pollTick, POLL_INTERVAL_MS);
@@ -1359,6 +1360,10 @@ async function pollTick() {
   if (currentAction) return;
   // Don't poll if the tab is hidden (saves quota)
   if (document.hidden) return;
+  // Don't poll for 15 seconds after a claim — the server needs time to fully
+  // commit our writes, and a poll during that window can show stale claim
+  // state, causing counts to "change" right after the user lands on review.
+  if (Date.now() - lastClaimAt < 15000) return;
 
   isPolling = true;
   try {
@@ -1376,11 +1381,9 @@ async function pollTick() {
     // the currently-playing video.
     const currentVid = (currentIdx >= 0 && filtered[currentIdx]) ? filtered[currentIdx].video_id : null;
 
-    // Recompute videos from current claim/enterprise context
+    // Rebuild videos pool from the current claim set (works across enterprises and filters)
     if (claimedIds.size > 0) {
-      const firstClaimed = allVideos.find(v=>claimedIds.has(v.video_id));
-      const ent = firstClaimed ? firstClaimed.enterprise : null;
-      videos = ent ? allVideos.filter(v=>v.enterprise===ent) : allVideos;
+      videos = allVideos.filter(v => claimedIds.has(v.video_id));
     } else {
       videos = [...allVideos];
     }
@@ -1762,6 +1765,7 @@ async function claimBatch(enterprise) {
 
   claimedIds = new Set(claimed);
   lsSet('qa_claimed_ids', [...claimedIds]);
+  lastClaimAt = Date.now();
 
   // OPTIMIZATION: Don't refetch the whole sheet — server already told us which
   // IDs we got. Mark them locally as claimed-by-us so the UI is correct without
@@ -1787,22 +1791,71 @@ async function claimBatch(enterprise) {
     }
   });
 
-  // Restore buttons so they're not stuck disabled if user comes back to this screen
-  restoreButtons();
+  // Build the working video pool from the IDs we actually claimed.
+  // This automatically respects any filters that were applied at claim time
+  // (because we passed video_ids to the server when filters were active),
+  // and works correctly across multiple enterprises (Load All Pending case).
+  videos = allVideos.filter(v => claimedIds.has(v.video_id));
 
-  hideScreens();
-  const pool = enterprise
-    ? allVideos.filter(v => v.enterprise === enterprise)
-    : allVideos.filter(v => claimedIds.has(v.video_id));
-  videos = pool;
-
-  applyFilter();
+  // Render filter dropdowns and stats BEFORE switching screens, so the
+  // review screen has all UI ready when shown.
   populateSidebarFilters();
   populateSumFilters();
+
+  // Carry the home-screen filters into the review-screen filters so the
+  // user can see what they filtered by, and so the review list visibly
+  // reflects the filter (not just the underlying pool).
+  if (userF) {
+    const fUserEl = document.getElementById('fUser');
+    if (fUserEl && [...fUserEl.options].some(o => o.value.toLowerCase() === userF)) {
+      fUserEl.value = [...fUserEl.options].find(o => o.value.toLowerCase() === userF).value;
+    }
+  }
+  if (statusF) {
+    const fStatusEl = document.getElementById('fStatus');
+    if (fStatusEl) fStatusEl.value = statusF;
+  }
+  // Only set the enterprise filter if we claimed from a single enterprise
+  // (not Load All Pending across multiple). Hide the enterprise dropdown
+  // entirely in single-enterprise mode — the user already chose one, so
+  // the dropdown is just clutter.
+  const fEntWrap = document.getElementById('fEntWrap');
+  if (enterprise) {
+    const fEntEl = document.getElementById('fEnt');
+    if (fEntEl && [...fEntEl.options].some(o => o.value === enterprise)) {
+      fEntEl.value = enterprise;
+    }
+    if (fEntWrap) fEntWrap.style.display = 'none';
+  } else {
+    if (fEntWrap) fEntWrap.style.display = '';
+  }
+
+  applyFilter();
   updateStats();
   updateBatchPill();
 
-  // Buttons get reset implicitly when buildEntList re-renders the screen later
+  // Switch screens — but DON'T restore buttons yet. We'll restore them
+  // once the first video has loaded metadata (or after a 6s safety timeout),
+  // so the user sees "Assigning…" persist through the actual loading time
+  // rather than flashing back to "Start QA".
+  hideScreens();
+
+  const restoreOnceVideoReady = () => {
+    if (restoredAlready) return;
+    restoredAlready = true;
+    restoreButtons();
+  };
+  let restoredAlready = false;
+  // Hook the video element if one exists (loadVideoAt was just called via applyFilter)
+  const player = document.getElementById('player');
+  if (player) {
+    const finish = () => restoreOnceVideoReady();
+    player.addEventListener('loadedmetadata', finish, { once: true });
+    player.addEventListener('error',          finish, { once: true });
+  }
+  // Safety: never leave buttons in loading state forever
+  setTimeout(restoreOnceVideoReady, 6000);
+
   const skippedNote = skipped.length ? ` (${skipped.length} were taken by others)` : '';
   toast(`✓ Claimed ${claimed.length} video${claimed.length===1?'':'s'}${enterprise?' from '+enterprise:''}${skippedNote}`,'success');
 }
@@ -1817,6 +1870,10 @@ function showEntScreen() {
   lsSet('qa_claimed_ids', []);
   curEnterprise = null;
   document.getElementById('batchPill').style.display = 'none';
+
+  // Restore the review-screen enterprise dropdown for the next claim
+  const fEntWrap = document.getElementById('fEntWrap');
+  if (fEntWrap) fEntWrap.style.display = '';
 
   buildEntList();
   showScreen('entScreen');
@@ -1836,11 +1893,8 @@ function updateBatchPill() {
 // ─────────────────────────────────────────────
 function applyBatch() {
   if (claimedIds.size > 0) {
-    const firstClaimed = allVideos.find(v=>claimedIds.has(v.video_id));
-    const ent = firstClaimed ? firstClaimed.enterprise : null;
-    videos = ent
-      ? allVideos.filter(v=>v.enterprise===ent)
-      : allVideos;
+    // Pool = exactly what the user has claimed (works across enterprises and filters)
+    videos = allVideos.filter(v => claimedIds.has(v.video_id));
   } else {
     videos = [...allVideos];
   }
