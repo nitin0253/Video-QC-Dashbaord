@@ -780,7 +780,7 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
     <div class="app-body">
 
       <!-- FILTER SIDEBAR -->
-      <div class="filter-sidebar">
+      <div class="filter-sidebar" id="filterSidebar">
         <div id="statsRow"><span style="font-size:10px;color:var(--text3);">Loading…</span></div>
 
         <div class="filter-panel">
@@ -1312,31 +1312,48 @@ async function loadAllData() {
   }
 }
 
+// Drop local cache entries that the server has clearly absorbed (no longer
+// needed locally) OR that are stale from old testing sessions (>5 minutes old
+// AND server still has no record). NEVER drop fresh entries — the server
+// write is async via no-cors fetch and can take many seconds to propagate.
 function pruneLocalReviews() {
   if (!Object.keys(localReviews).length) return;
   const sheetVids = new Map();
   allVideos.forEach(v => sheetVids.set(v.video_id, v));
-  const queuedIds = new Set(submitQueue.map(q => q.video_id));
+  const STALE_MS = 5 * 60 * 1000; // 5 minutes
+  const now = Date.now();
   let dropped = 0;
   Object.keys(localReviews).forEach(vid => {
+    const lr = localReviews[vid];
     const v = sheetVids.get(vid);
     if (!v) return; // Not in current sheet snapshot — keep
+
     const serverDone = (v.qa_state === 'done') || (v.qa_status && v.qa_status.trim());
-    const queued = queuedIds.has(vid);
     if (serverDone) {
-      // Server has it: cache is redundant, drop it
+      // Server has it: cache is redundant, drop it.
       delete localReviews[vid];
       dropped++;
-    } else if (!queued) {
-      // Server doesn't have it, and it's not queued for retry → cache is stale
-      // (likely from an old testing session). Drop so user can re-QA if needed.
+      return;
+    }
+
+    // Server doesn't have it. Don't drop unless this entry is genuinely stale.
+    const ts = lr && lr.timestamp ? Date.parse(lr.timestamp) : NaN;
+    if (!isNaN(ts) && (now - ts) > STALE_MS) {
+      // Old entry the server never absorbed — likely from an aborted submit.
+      // Move it to the retry queue so flushQueue() can try again later
+      // instead of just losing the review.
+      if (!submitQueue.some(q => q.video_id === vid)) {
+        submitQueue.push(lr);
+      }
       delete localReviews[vid];
       dropped++;
     }
   });
   if (dropped > 0) {
     lsSet('qa_local_reviews', localReviews);
-    console.log('[prune] removed', dropped, 'stale local review entries');
+    lsSet('qa_submit_queue', submitQueue);
+    updateQueueBadge();
+    console.log('[prune] reconciled', dropped, 'local review entries');
   }
 }
 
@@ -2289,9 +2306,25 @@ function updateListItemBadge(idx,action,isLocal) {
 function updateStats() {
   const total   = videos.length;
   const pending = videos.filter(v=>!isQAed(v) && !isLockedByOther(v)).length;
-  const myReviews = Object.values(localReviews).filter(r=>r.reviewer===reviewer.email);
-  const approved= myReviews.filter(r=>r.action==='Approved').length;
-  const rejected= myReviews.filter(r=>r.action==='Rejected').length;
+  // Count approvals/rejections by combining local cache + server qa_status
+  // for videos in this session's pool. This is stable across the moment when
+  // the local cache is pruned after server confirmation.
+  const myEmail = (reviewer.email || "").toLowerCase();
+  let approved = 0, rejected = 0;
+  videos.forEach(v => {
+    const lr = localReviews[v.video_id];
+    if (lr && (lr.reviewer || "").toLowerCase() === myEmail) {
+      if (lr.action === 'Approved') approved++;
+      else if (lr.action === 'Rejected') rejected++;
+      return;
+    }
+    // No local cache — fall back to server qa_status, but only if we're the reviewer
+    if (v.qa_status && (v.qa_reviewer || "").toLowerCase() === myEmail) {
+      const a = v.qa_status.toLowerCase();
+      if (a === 'approved' || a === 'verified') approved++;
+      else if (a === 'rejected') rejected++;
+    }
+  });
   document.getElementById('statsRow').innerHTML=`
     <span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:11px;background:rgba(255,255,255,.06);color:var(--text2);">${total} total</span>
     <span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:11px;background:rgba(59,130,246,.1);color:var(--accent2);">${pending} pending</span>
@@ -2308,6 +2341,9 @@ function showPage(page) {
   document.querySelectorAll('[id^="snav-"]').forEach(t=>t.classList.remove('active'));
   document.getElementById(`page-${page}`).classList.add('active');
   if(document.getElementById(`snav-${page}`)) document.getElementById(`snav-${page}`).classList.add('active');
+  // Hide the filter/video-list sidebar on Summary so it takes the whole content area
+  const fs = document.getElementById('filterSidebar');
+  if (fs) fs.style.display = (page === 'summary') ? 'none' : '';
   if(page==='summary'){renderSummary();populateSumFilters();}
 }
 
@@ -2316,29 +2352,69 @@ function showPage(page) {
 // ─────────────────────────────────────────────
 function populateSumFilters() {
   const ents=[...new Set(allVideos.map(v=>v.enterprise).filter(Boolean))].sort();
-  const reviewSet = isAdmin()
-    ? Object.values(localReviews)
-    : Object.values(localReviews).filter(r=>r.reviewer===reviewer.email);
-  const revs=[...new Set(reviewSet.map(r=>r.reviewer).filter(Boolean))].sort();
+  // Build reviewer set from BOTH local cache and server-confirmed qa_reviewer field
+  const seen = new Set();
+  Object.values(localReviews).forEach(r => { if (r.reviewer) seen.add(r.reviewer); });
+  allVideos.forEach(v => { if (v.qa_reviewer) seen.add(v.qa_reviewer); });
+  let revs = [...seen].sort();
+  if (!isAdmin()) revs = revs.filter(r => r.toLowerCase() === (reviewer.email || "").toLowerCase());
   document.getElementById('sumEnt').innerHTML='<option value="">All Enterprises</option>'+ents.map(e=>`<option value="${escAttr(e)}">${escH(e)}</option>`).join('');
   document.getElementById('sumRev').innerHTML='<option value="">All Reviewers</option>'  +revs.map(r=>`<option value="${escAttr(r)}">${escH(r)}</option>`).join('');
 }
+
+// Build the unified summary row list by merging localReviews with server qa_status.
+// A row appears once whether it lives only in local cache, only on the server, or both.
+function buildAllReviews() {
+  const byId = new Map();
+  // Start with local cache (these have the most accurate timestamp & comment)
+  Object.values(localReviews).forEach(r => {
+    byId.set(r.video_id, {
+      video_id: r.video_id,
+      action: r.action,
+      comment: r.comment || '',
+      reviewer: r.reviewer || '',
+      reviewer_name: r.reviewer_name || '',
+      timestamp: r.timestamp || '',
+      _source: 'local',
+    });
+  });
+  // Layer on server data — only add if not already present (local wins)
+  allVideos.forEach(v => {
+    if (!v.qa_status || !v.qa_status.trim()) return;
+    if (byId.has(v.video_id)) return;
+    const a = v.qa_status.toLowerCase();
+    let action = v.qa_status;
+    if (a === 'approved' || a === 'verified') action = 'Approved';
+    else if (a === 'rejected') action = 'Rejected';
+    byId.set(v.video_id, {
+      video_id: v.video_id,
+      action,
+      comment: v.qa_reason || '',
+      reviewer: v.qa_reviewer || '',
+      reviewer_name: '',
+      timestamp: v.qa_timestamp || '',
+      _source: 'server',
+    });
+  });
+  return [...byId.values()];
+}
+
 function getSumData() {
   const ent=document.getElementById('sumEnt').value;
   const rev=document.getElementById('sumRev').value;
   const act=document.getElementById('sumAct').value;
   const fr =document.getElementById('sumFrom').value;
   const to =document.getElementById('sumTo').value;
-  let pool = Object.values(localReviews);
+  let pool = buildAllReviews();
   // Non-admin sees only their own reviews
-  if (!isAdmin()) pool = pool.filter(r=>r.reviewer===reviewer.email);
+  if (!isAdmin()) pool = pool.filter(r=>(r.reviewer||"").toLowerCase()===(reviewer.email||"").toLowerCase());
   return pool.filter(lr=>{
     const v=allVideos.find(v=>v.video_id===lr.video_id)||{};
     if(ent&&v.enterprise!==ent)  return false;
     if(rev&&lr.reviewer !==rev)  return false;
     if(act&&lr.action   !==act)  return false;
-    if(fr){const d=new Date(lr.timestamp);if(d<new Date(fr))return false;}
-    if(to){const d=new Date(lr.timestamp);if(d>new Date(to+'T23:59:59'))return false;}
+    if(fr&&lr.timestamp){const d=new Date(lr.timestamp);if(d<new Date(fr))return false;}
+    if(to&&lr.timestamp){const d=new Date(lr.timestamp);if(d>new Date(to+'T23:59:59'))return false;}
     return true;
   });
 }
