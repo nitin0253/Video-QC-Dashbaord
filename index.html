@@ -155,6 +155,12 @@ body{
 }
 .claim-btn:hover{opacity:.85;}
 .claim-btn:disabled{opacity:.4;cursor:not-allowed;}
+.spinner-inline{
+  display:inline-block;width:11px;height:11px;
+  border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
+  border-radius:50%;animation:spin .7s linear infinite;
+  vertical-align:-2px;margin-right:5px;
+}
 .ent-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0;}
 .link-btn{font-size:12px;color:var(--accent2);cursor:pointer;background:none;border:none;font-family:var(--font-body);}
 .link-btn:hover{text-decoration:underline;}
@@ -690,8 +696,8 @@ tbody td.mono{font-family:var(--mono);font-size:11px;}
     <div class="ent-search-row">
       <input class="ent-search" id="entSearch" placeholder="🔍 Search enterprises by name…" oninput="renderEntList()" autocomplete="off"/>
     </div>
-    <div class="ent-total">
-      <span class="lbl">Total available pending QA</span>
+    <div class="ent-total" id="entTotalBox">
+      <span class="lbl" id="entTotalLbl">Total available pending QA</span>
       <span class="num" id="entTotal">—</span>
     </div>
     <div class="ent-list" id="entList"><div style="padding:20px;text-align:center;color:var(--text3);">Loading…</div></div>
@@ -1447,18 +1453,21 @@ function isQAed(v) {
 // ─────────────────────────────────────────────
 function buildEntList() {
   const myPending = allVideos.filter(v => !isQAed(v) && !isLockedByOther(v));
-  document.getElementById('entTotal').textContent = myPending.length + ' available';
-
-  // Diagnostic line: show what the dashboard is seeing
   const totalRows = allVideos.length;
   const lockedByOthers = allVideos.filter(v => isLockedByOther(v)).length;
   const serverDone = allVideos.filter(v =>
     (v.qa_state === 'done') || (v.qa_status && v.qa_status.trim())
   ).length;
   const localOnly = Object.keys(localReviews).length;
+
+  // Top breakdown — show all numbers so the math is transparent
+  document.getElementById('entTotal').textContent = myPending.length + ' available';
+  document.getElementById('entTotalLbl').innerHTML =
+    `Total ${totalRows} · Done ${serverDone} · In progress ${lockedByOthers} · Available`;
+
   const dbg = document.getElementById('entDebug');
   if (dbg) {
-    dbg.textContent = `[debug] sheet=${totalRows} · server-done=${serverDone} · in-progress-by-others=${lockedByOthers} · local-cache=${localOnly}`;
+    dbg.textContent = `[debug] from-server=${totalRows} · server-done=${serverDone} · in-progress-by-others=${lockedByOthers} · local-cache=${localOnly} · pending=${myPending.length}`;
   }
 
   renderEntList();
@@ -1609,53 +1618,117 @@ function renderEntList() {
 async function claimBatch(enterprise) {
   curEnterprise = enterprise;
 
-  // Show a loading state on the button(s) while we claim
-  toast('Claiming videos…', 'info');
+  // Disable ALL claim buttons across the enterprise list and Load All Pending,
+  // and convert the clicked one to an "Assigning..." state.
+  const claimBtns = document.querySelectorAll('.claim-btn');
+  const loadAllBtn = document.querySelector('#entScreen .ent-footer .btn-outline');
+  const originalLabels = new Map(); // restore on failure
+  claimBtns.forEach(btn => {
+    originalLabels.set(btn, btn.innerHTML);
+    btn.disabled = true;
+    btn.style.cursor = 'not-allowed';
+    btn.style.opacity = '0.55';
+    // Mark which button initiated the claim so we can show "Assigning…" on it
+    const onclickAttr = btn.getAttribute('onclick') || '';
+    const isThisOne = enterprise && onclickAttr.includes(`'${escAttr(enterprise)}'`);
+    if (isThisOne || (!enterprise && btn === loadAllBtn)) {
+      btn.innerHTML = '<span class="spinner-inline"></span> Assigning…';
+    }
+  });
+  if (loadAllBtn) {
+    originalLabels.set(loadAllBtn, loadAllBtn.innerHTML);
+    loadAllBtn.disabled = true;
+    loadAllBtn.style.cursor = 'not-allowed';
+    loadAllBtn.style.opacity = '0.55';
+    if (!enterprise) {
+      loadAllBtn.innerHTML = '<span class="spinner-inline"></span> Assigning…';
+    }
+  }
+
+  const restoreButtons = () => {
+    originalLabels.forEach((html, btn) => {
+      btn.innerHTML = html;
+      btn.disabled = false;
+      btn.style.cursor = '';
+      btn.style.opacity = '';
+    });
+  };
 
   // ATOMIC server-side claim. The server returns the actual video_ids it
   // assigned to us, after re-checking the live sheet under a lock.
-  // (Anything another user grabbed between our last refresh and now is excluded.)
   const reqBody = {
     action: 'claim',
     reviewer: reviewer.email,
     timestamp: new Date().toISOString(),
   };
   if (enterprise) reqBody.enterprise = enterprise;
-  // If we want to claim a specific set, pass video_ids instead.
 
   let claimResult;
   try {
     claimResult = await postToSheetReadable(reqBody);
   } catch (e) {
+    restoreButtons();
     toast('Claim failed — check connection and try again', 'error');
     console.error('claim error:', e);
     return;
   }
   if (!claimResult || !claimResult.ok) {
+    restoreButtons();
     toast('Claim rejected by server' + (claimResult && claimResult.error ? ': ' + claimResult.error : ''), 'error');
     return;
   }
   const claimed = Array.isArray(claimResult.claimed) ? claimResult.claimed : [];
   const skipped = Array.isArray(claimResult.skipped) ? claimResult.skipped : [];
   if (claimed.length === 0) {
+    // Apply skipped rows' new state locally for instant UI feedback
+    const nowISO0 = new Date().toISOString();
+    skipped.forEach(s => {
+      if (s.reason === 'locked_by_other' && s.id && s.owner) {
+        const v = allVideos.find(x => x.video_id === s.id);
+        if (v) {
+          v.qa_claimed_by = s.owner;
+          v.qa_claimed_at = nowISO0;
+          v.qa_state = 'in_progress';
+        }
+      }
+    });
+    restoreButtons();
+    buildEntList(); // re-render with new lock state
     toast(skipped.length
       ? `Nothing claimed — ${skipped.length} videos were already taken by other reviewers`
       : 'No available videos to claim — try another enterprise',
       'warn');
-    // Refresh so we see the latest counts
-    await loadAllData();
-    buildEntList();
     return;
   }
 
   claimedIds = new Set(claimed);
   lsSet('qa_claimed_ids', [...claimedIds]);
 
-  // Refresh local data so we have the up-to-date claim state from the sheet
-  await loadAllData();
+  // OPTIMIZATION: Don't refetch the whole sheet — server already told us which
+  // IDs we got. Mark them locally as claimed-by-us so the UI is correct without
+  // the round-trip. The next poll (12s) will reconcile any drift.
+  const nowISO = new Date().toISOString();
+  const claimedSet = new Set(claimed);
+  allVideos.forEach(v => {
+    if (claimedSet.has(v.video_id)) {
+      v.qa_claimed_by = reviewer.email;
+      v.qa_claimed_at = nowISO;
+      v.qa_state = 'in_progress';
+    }
+  });
+  // Also mark skipped-by-other rows so the UI reflects them
+  skipped.forEach(s => {
+    if (s.reason === 'locked_by_other' && s.id) {
+      const v = allVideos.find(x => x.video_id === s.id);
+      if (v && s.owner) {
+        v.qa_claimed_by = s.owner;
+        v.qa_claimed_at = nowISO;
+        v.qa_state = 'in_progress';
+      }
+    }
+  });
 
   hideScreens();
-  // videos = all videos for this enterprise (so the toggle to show QA'd works)
   const pool = enterprise
     ? allVideos.filter(v => v.enterprise === enterprise)
     : allVideos.filter(v => claimedIds.has(v.video_id));
@@ -1667,6 +1740,7 @@ async function claimBatch(enterprise) {
   updateStats();
   updateBatchPill();
 
+  // Buttons get reset implicitly when buildEntList re-renders the screen later
   const skippedNote = skipped.length ? ` (${skipped.length} were taken by others)` : '';
   toast(`✓ Claimed ${claimed.length} video${claimed.length===1?'':'s'}${enterprise?' from '+enterprise:''}${skippedNote}`,'success');
 }
